@@ -3,7 +3,7 @@
 Game jam game (theme: **BOUNCE BACK**). A fake Windows-XP-style desktop runs a terrible
 email client, **Outlook Saga**. The player has to send ONE email to their boss — a grumpy
 **printer** (`printer@company.com`) — explaining why they're late. Every Send bounces back
-with a new absurd error (17 playable stages). Clippy delivers each error and gets more
+with a new absurd error (16 playable stages). Clippy delivers each error and gets more
 unhinged. Stage 18: "delivered" → fake blue screen → the end.
 
 3–4 people edit **different stage files at the same time**. Keep changes local to the file
@@ -139,7 +139,7 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
   (any caps/spacing) shows an achievement popup once and gives back `EASTER_EGG_BONUS_MINUTES`
   (`general.easterEggs`). Stage 18: after "delivered", the printer's reply flies into the Inbox, then
   the blue screen.
-- All numbers live in `CONFIG` at the top of engine.js. Timing budget: 17 bounces minimum +
+- All numbers live in `CONFIG` at the top of engine.js. Timing budget: 16 bounces minimum +
   the clock ticking every 30 s — that's why the clock starts at 8:00, not 8:30.
 
 ## Email state flows between stages
@@ -151,9 +151,8 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
 | 4 | cat.jpg is 3 MB |
 | 5 | body trimmed by the player (Clippy's paragraph partly remains) |
 | 6 | cat.jpg → cat.png |
-| 7 | subject = the 2-word recovery phrase (found in My Computer, typed on the on-screen keyboard) |
+| 7 | subject = the recovery word (found in My Computer, typed on the on-screen keyboard) |
 | 8 | all attachments → one "New Folder.zip" |
-| 10 | "sorry"s removed from the body |
 | 11 | "[signature.png]" appended to the body |
 | 12 | angry sentence (calmed) stays in the body |
 | 15 | From = `<username>@company.com` |
