@@ -151,7 +151,7 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
 | 4 | cat.jpg is 3 MB |
 | 5 | body trimmed by the player (Clippy's paragraph partly remains) |
 | 6 | cat.jpg → cat.png |
-| 7 | subject = the 3-word recovery phrase (found in My Computer, typed on the on-screen keyboard) |
+| 7 | subject = the 2-word recovery phrase (found in My Computer, typed on the on-screen keyboard) |
 | 8 | all attachments → one "New Folder.zip" |
 | 10 | "sorry"s removed from the body |
 | 11 | "[signature.png]" appended to the body |

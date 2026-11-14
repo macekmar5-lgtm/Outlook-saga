@@ -13,7 +13,7 @@
     setup(G) {
       G.state.captcha = false;
 
-      const win = G.openWindow({ title: 'Are you human?', x: 400, y: 30, w: 470, h: 630, closable: false });
+      const win = G.openWindow({ title: 'Are you human?', x: 400, y: 30, w: 470, h: 630, closable: false, alwaysOnTop: true });
       const col = G.make('div', 'stage-center');
 
       const header = G.make('div', 'captcha-header');

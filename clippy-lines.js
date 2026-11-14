@@ -173,11 +173,11 @@ Game.lines = {
 
     "7": {
       "error": "Keyboard disconnected.",
-      "clippy": "Your keyboard got disconnected. Don't worry, I built you a new, better one. To reconnect, the subject has to be your 3-word keyboard recovery phrase. You saved it in a file on My Computer. Somewhere.",
-      "hint": "Open My Computer (top left of the desktop) and find \"keyboard recovery phrase.txt\" in {path}. Then type its 3 words as the subject with the on-screen keyboard (Space between them).",
+      "clippy": "Your keyboard got disconnected. Don't worry, I built you a new, better one. To reconnect, the subject has to be your 2-word keyboard recovery phrase. You saved it in a file on My Computer.",
+      "hint": "Open My Computer (top left of the desktop) and click \"keyboard recovery phrase.txt\" (right there in {path}, next to the folders). Then type its 2 words as the subject with the on-screen keyboard (Space between them).",
       "retry": [
         "I can hear you typing. It is not working. Use. The. Keyboard. Window.",
-        "Three words. From the file. In My Computer. You can do three words. Probably."
+        "Two words. From the file. In My Computer. You can do two words. Probably."
       ],
       "lines": {
         "openMyComputer": "The recovery phrase is in My Computer. Top left of the desktop. The icon that looks like a computer. Because it is My Computer.",

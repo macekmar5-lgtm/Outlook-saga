@@ -13,7 +13,7 @@
 
   const WORD_POOL = ['kiwi', 'toast', 'pickle', 'waffle', 'noodle', 'mango', 'bagel', 'taco', 'llama',
     'donut', 'yeti', 'sock', 'tuna', 'pigeon', 'jelly', 'wobble', 'goose', 'melon', 'pizza', 'otter'];
-  const WORDS = shuffle(WORD_POOL).slice(0, 3);
+  const WORDS = shuffle(WORD_POOL).slice(0, 2);
   const PHRASE_FILE = 'keyboard recovery phrase.txt';
 
   const D = (name, children) => ({ name, kind: 'dir', children: children || [] });
@@ -88,15 +88,7 @@
     ]);
   }
 
-  const HIDING_SPOTS = [
-    ['Documents', 'Work', 'Meetings', '2003', 'March'],
-    ['Users', 'You', 'AppData', 'Roaming', 'Clippy'],
-    ['Pictures', 'Cats', 'Not cats'],
-    ['Homework', 'History', 'Definitely homework'],
-    ['Program Files', 'WinRAWR', 'license (unpaid)'],
-    ['Windows', 'System32', 'drivers', 'keyboard'],
-  ];
-  const SPOT = rnd(HIDING_SPOTS);
+  const SPOT = [];
   const pathText = (parts) => 'C:\\' + parts.join('\\');
 
   function makeDisk() {
@@ -104,7 +96,7 @@
     let dir = disk;
     SPOT.forEach((name) => { dir = dir.children.find((c) => c.name === name); });
     const real = T(PHRASE_FILE,
-      `KEYBOARD RECOVERY PHRASE\n\nType these 3 words as the subject:\n\n    ${WORDS.join(' ')}\n\nDo NOT lose this file.\n(You will lose this file.)`);
+      `KEYBOARD RECOVERY PHRASE\n\nType these 2 words as the subject:\n\n    ${WORDS.join(' ')}\n\nDo NOT lose this file.\n(You will lose this file.)`);
     real.real = true;
     const at = Math.floor(Math.random() * (dir.children.filter((c) => c.kind !== 'dir').length + 1));
     const firstFile = dir.children.findIndex((c) => c.kind !== 'dir');
@@ -254,9 +246,9 @@
     check(G) {
       const typed = G.mail.subject.toLowerCase().trim().split(/\s+/).filter(Boolean);
       if (typed.join(' ') === WORDS.join(' ')) return true;
-      if (!typed.length) return 'The subject must be your 3-word keyboard recovery phrase. It is in a file somewhere in My Computer.';
+      if (!typed.length) return 'The subject must be your 2-word keyboard recovery phrase. It is in a file somewhere in My Computer.';
       const right = WORDS.filter((w, i) => typed[i] === w).length;
-      return `Wrong recovery phrase (${right} of 3 words right). Find "${PHRASE_FILE}" in My Computer.`;
+      return `Wrong recovery phrase (${right} of 2 words right). Find "${PHRASE_FILE}" in My Computer.`;
     },
 
     cleanup(G) {
