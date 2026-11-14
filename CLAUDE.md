@@ -1,9 +1,10 @@
 # CLAUDE.md — Outlook Saga
 
 Game jam game (theme: **BOUNCE BACK**). A fake Windows-XP-style desktop runs a terrible
-email app. The player has to send ONE email to their boss explaining why they're late.
-Every Send bounces back with a new absurd error (18 stages). Clippy delivers each error
-and gets more unhinged. Stage 18: "delivered" → fake blue screen → the end.
+email client, **Outlook Saga**. The player has to send ONE email to their boss — a grumpy
+**printer** (`printer@company.com`) — explaining why they're late. Every Send bounces back
+with a new absurd error (17 playable stages). Clippy delivers each error and gets more
+unhinged. Stage 18: "delivered" → fake blue screen → the end.
 
 3–4 people edit **different stage files at the same time**. Keep changes local to the file
 you were asked to work on.
@@ -16,36 +17,43 @@ you were asked to work on.
 2. **ALL VISUALS ARE HUMAN-MADE FILES IN /assets.** Never generate images, SVG, canvas
    pictures, emoji-as-icons, base64 images, or **CSS-drawn graphics**: no gradients, no
    shadows (box/text), no rounded corners, no coloured boxes/backgrounds, no decorative
-   borders/outlines, no shapes, no glyphs standing in for icons (×, ✓, ":(").
+   borders/outlines, no shapes, no glyphs standing in for icons (×, ✓).
    - CSS is ONLY for layout, positioning, text (font, size, colour) and stretching our
-     images. Motion (transform/opacity animations) is fine.
+     images (border-image 9-slice for frames/buttons, stretched images for everything
+     else). Motion (transform/opacity animations) and effects ON our art (e.g. the webcam
+     blur) are fine.
    - Pictures (icons, props, characters): `Game.asset('file.png', { w, h })`.
    - Surfaces (frames, bars, buttons, fields, keys, checkboxes, progress bars, panels,
      backgrounds): an element with `data-skin="file.png"` — use `Game.ui.*` or
-     `Game.setSkin(el, 'file.png')`. Drawn 9-slice (if style.css has `--slice-<name>`)
-     or stretched.
+     `Game.setSkin(el, 'file.png')`.
    - Missing files show a dashed placeholder with the filename. That is intended: it's
      the artists' to-do list. Never "fix" a placeholder by drawing something in CSS.
    - Never use browser-drawn widgets: native `<select>`, checkbox, radio, range,
      `<progress>`, visible scrollbars. Use `Game.ui.*`.
-   - Exception: a canvas the PLAYER draws on (stage 11 signature strokes).
-   - Text is fine — it's rendered with a font.
-3. **Relative paths only**: `assets/x.png`, never `/assets/x.png` (breaks file:// and itch).
-4. **New art filename?** Add it to the stage's `assets: [...]` array AND to the checklist in
+   - Allowed exceptions: text (fonts), a canvas the PLAYER draws on (stage 11), the black
+     page background (letterbox bars and `Game.blackout`).
+3. **Files are loaded by filename.** The browser reads the content, so a JPG/WebP/AVIF
+   saved as `.png` works. HEIC does not (browsers can't decode it) → `tools/fix-art.ps1`.
+   A file that fails to load never crashes anything; it shows the placeholder.
+4. **Relative paths only**: `assets/x.png`, never `/assets/x.png` (breaks file:// and itch).
+5. **New art filename?** Add it to the stage's `assets: [...]` array AND to the asset list in
    README.md. Shared OS/UI art also goes in the `--os-assets` list at the top of style.css.
-5. Fixed **1280×720** game screen scaled to fit. Use game pixels everywhere; convert mouse
+6. Fixed **1280×720** game screen scaled to fit. Use game pixels everywhere; convert mouse
    positions with `Game.toGame(event)`. Target Chrome desktop only.
-6. Don't rename/remove public `Game.*` functions — other people's stages depend on them.
-   Adding to the engine is OK, but say so in your summary.
+7. Don't rename/remove public `Game.*` functions — other people's stages depend on them.
+   Adding to the engine is OK when several stages need it; document it here.
+8. The boss is a printer. Recipient: `printer@company.com`. Keep jokes consistent.
 
 ## Files
 
 ```
-index.html          markup for title screen, desktop, mail window, taskbar, layers; loads scripts
-style.css           layout + text only. Section 1 = ART LIST + 9-slice settings
+index.html          title screen, desktop, the mail client, taskbar, layers; loads scripts
+style.css           layout + text only. Section 1 = ART LIST + 9-slice settings,
+                    section 13 = layout for stage windows
 engine.js           CONFIG + the global `Game` object (all helpers + game flow)
 stages/_template.js documented example stage (NOT loaded by index.html)
-stages/NN-name.js   one file per stage, registered with Game.registerStage
+stages/NN-name.js   one file per stage, registered with Game.registerStage (all 18 are built)
+tools/fix-art.ps1   converts fake PNGs (.heic) to real PNGs, warns about white backgrounds
 assets/             hand-made art (png)          — pushed by the artists
 assets/sounds/      hand-made sounds (wav)       — pushed by the audio people
 ```
@@ -54,7 +62,17 @@ Script order in index.html: `engine.js`, then every `stages/*.js`. `init()` runs
 `DOMContentLoaded`, after all stages registered. A missing stage file just 404s and is
 skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
 
-## How art is drawn (engine.js section 4 + style.css section 1/3)
+## The mail client (index.html `#mail-window`)
+
+| Part | Art | Notes |
+|---|---|---|
+| Title bar | `titlebar.png`, `app-icon.png`, `btn-close/minimize/maximize.png` | close/min/max only make Clippy talk |
+| Toolbar | `saga-logo.png`, `tb-new/reply/attach/delete/settings.png`, `ad-banner.png` | buttons do nothing but sarcastic Clippy lines (`TOOLBAR_LINES` in engine.js) |
+| Sidebar | `folder-inbox/outbox/sent/drafts/bounced/trash.png`, `user-avatar.png` | **Bounced (N)** counts every bounce (`Game.bounces`); user name = From |
+| Compose | `input-box.png` (From/To/Subject), `format-bar.png`, `attach-chip.png`, `body-paper.png`, `char-counter-bg.png`, `btn-send.png` / `btn-send-pressed.png` | body can be swapped for a clickable word view |
+| Status bar | `statusbar.png` | "Connected (barely)" (`CONFIG.STATUS_TEXT`); every send shows a **Sending...** bar (`progress-bar.png` / `progress-fill.png`) |
+
+## How art is drawn (engine.js section 4 + style.css sections 1/3)
 
 - **Pictures** — `Game.asset(file, {w, h})` returns `<div class="asset"><img></div>`
   (object-fit: contain). Missing → `.asset-missing` dashed box with the filename. Swap with
@@ -71,16 +89,15 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
   - Inputs/textareas can't show `::after`, so they live inside a skinned wrapper
     (`.ui-field[data-skin="input-box.png"]`) — use `Game.ui.input()`.
 - **Text colours** — default `--text` (readable on placeholders). When a file loads, `#game`
-  gets `.skin-<name>`; style.css section 12 switches text colours on art (e.g. white title
-  bar text once titlebar.png exists).
-- **Cursors** — `cursor.png`, `cursor-hand.png`, `cursor-loading.png` (32×32); the system
-  cursor is used until they exist. Hotspots in style.css section 1.
-- The placeholder fill colour is dev-only and vanishes when the art exists.
+  gets `.skin-<name>`; style.css section 12 switches text colours on art.
+- **Cursors** — `cursor.png`, `cursor-hand.png`, `cursor-loading.png`, `text-cursor.png`
+  (32×32, optional); the system cursor is used until they exist.
 
 ## Game flow (engine.js section 10)
 
-- Email starts with an EMPTY subject. Title screen → Start → clock starts (8:30).
-- **Send**: envelope flies out and bounces back (`bounce.wav`), costs 1 minute.
+- Email starts with an EMPTY subject. Title screen → Start → clock starts (8:00; deadline 9:00).
+- **Send**: "Sending..." bar, envelope flies out and bounces back (`bounce.wav`), Bounced
+  counter +1, costs 1 minute.
   - no active stage → start the first stage
   - active stage, `check()` fails → "Mail Delivery Failed (again)" popup + annoyed Clippy
   - `check()` passes → `cleanup()` + tracked cleanups → start next stage
@@ -93,7 +110,26 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
   screen. check/cleanup never run.
 - Clock hits 9:00 → "You're fired" → `Game.restart()` (page reload).
 - Clicking Clippy shows the current stage's `hint` and costs 1 minute.
-- All numbers live in `CONFIG` at the top of engine.js.
+- All numbers live in `CONFIG` at the top of engine.js. Timing budget: 17 bounces minimum +
+  the clock ticking every 30 s — that's why the clock starts at 8:00, not 8:30.
+
+## Email state flows between stages
+
+| Stage | Changes that stay |
+|---|---|
+| 1–2 | subject typed, Caps Lock off |
+| 3 | attachments: cat.jpg (+ 2 others), the .exe is gone |
+| 4 | cat.jpg is 3 MB |
+| 5 | body trimmed by the player (Clippy's paragraph partly remains) |
+| 6 | cat.jpg → cat.png |
+| 7 | new subject typed on the on-screen keyboard |
+| 8 | all attachments → one "New Folder.zip" |
+| 10 | "sorry"s removed from the body |
+| 11 | "[signature.png]" appended to the body |
+| 12 | angry sentence (calmed) stays in the body |
+| 15 | From = `<username>@company.com` |
+
+Every `setup()` still creates what it needs if it's missing, so `?stage=N` works on its own.
 
 ## Stage API
 
@@ -115,51 +151,56 @@ Game.registerStage({
 });
 ```
 
+Clippy tone: polite in 1–6 (`happy`), passive-aggressive in 7–12 (`annoyed`/`angry`),
+unhinged in 13–17 (`panic`). Every stage needs a `hint`.
+
 **Stage rules**
-- `setup()` must create everything the stage needs. Never assume earlier stages ran —
-  testers jump straight to a stage with `?stage=NN`. (Stages may read the mail
-  fields/attachments, but should add what they need if it's missing.)
+- `setup()` must create everything the stage needs if it's missing (attachments, icons, body
+  text). Testers jump straight to a stage with `?stage=NN`.
 - Everything a stage adds must disappear when it ends. Auto-removed at stage end:
-  `Game.openWindow`, `Game.addIcon`, `Game.tray.add`, `Game.highlight` (unless
-  `persist: true`), plus `Game.on`, `Game.timeout`, `Game.interval`, `Game.track(fn)`.
-  Anything else (DOM you appended yourself, classes on shared elements, changes to the
-  persistent tray items wifi/volume/battery, `G.state` flags) → undo it in `cleanup()` or
-  register it with `G.track()`.
+  `openWindow`, `openApp`, `addIcon`, `addProp`, `tray.add`, `highlight`, `dragGhost`,
+  `dragAttachments`, `wordView`, `runProgress` (unless `persist: true`), plus `on`, `timeout`,
+  `interval`, `track(fn)`. Anything else (DOM you appended yourself, changes to persistent
+  tray items wifi/volume/battery, `mail.status`, `mail.charLimit`, `G.state` flags) → undo it
+  in `cleanup()`.
 - Use `G.state.<something>` for stage flags; delete them in cleanup.
-- Use `G.timeout/G.interval/G.on` instead of raw setTimeout/addEventListener.
-- Need stage-specific layout CSS? Inline `style` for layout/positioning only, or a small
-  section at the end of style.css named after your stage. Never visual styling.
-- Keep the left desktop column (x < 110, y < 380) free — default icons live there.
-  Clippy sits bottom-right (≈ x 1130–1260, y 540–670) with his bubble above.
-- Comment the top of the file: what the player must do + assets used (see existing stubs).
+- Stage-window layout CSS goes in style.css section 13 (layout only).
+- Desktop real estate: left column (x < 110, y < 380) = default icons; bottom left
+  (x < 110, y 400–680) = stage icons/props; right column (x 1030–1270, y < 400) = stage
+  icons/windows; Clippy + bubble bottom right. Mail window: x 116–1030, y 6–674.
 
 ## Engine API (Game.*)
 
 | Area | API |
 |---|---|
-| Mail | `mail.to / from / subject / body` (get/set), `mail.charLimit` (null or number), `mail.updateCounter()`, `mail.el.{window,from,to,subject,body,bodyWrap,counter,send,attachBar,attachList}` |
-| Attachments | `attachments.add(name, sizeLabel, iconAsset)` → chip el, `.remove(name)`, `.list()`, `.get(name)`, `.setSize(name, label)`, `.clear()` |
+| Mail | `mail.to / from / subject / body / status` (get/set), `mail.charLimit` (null or number), `mail.updateCounter()`, `mail.el.{window,from,to,subject,body,bodyWrap,counter,send,attachBar,attachList,status}` |
+| Attachments | `attachments.add(name, sizeLabel, iconAsset)` → chip el, `.remove(name)`, `.rename(old, new, {size, icon})`, `.list()`, `.get(name)` → `{name, size, icon, el}`, `.setSize(name, label)`, `.clear()` |
+| Drag chips | `dragAttachments((att, point) => …)` — chips become ghost-draggable for this stage; use `hitTest(target, point)` |
+| Word view | `wordView(tokens, (i, token, view) => …)` → view `{tokens, render, text(), count(tag), close()}`; tokens `{text, tag}` (tagged = clickable red word); `wordView.split(text)`; closes itself at stage end and writes the text back |
 | Pictures | `asset(file, {w, h, className})` → el, `setAsset(el, file)` |
 | Surfaces | `setSkin(el, file)`, `skin.has('window-frame')`, attribute `data-skin` / `data-skin-pressed` |
-| UI kit | `ui.button(label, onClick, {skin, pressed, className})`, `ui.input({value, placeholder, type, multiline, skin})` → wrapper (`.input`), `ui.checkbox(label, checked, onChange)` (`.checked`, `.setChecked(v)`), `ui.progress(v)` (`.set(0..1)`), `ui.key(label, onClick)` |
+| UI kit | `ui.button(label, onClick, {skin, pressed, className})`, `ui.input({value, placeholder, type, multiline, skin})` → wrapper (`.input`), `ui.checkbox(label, checked, onChange, {readOnly})` (`.checked`, `.setChecked(v)`), `ui.progress(v)` (`.set(0..1)`), `ui.key(label, onClick)` |
+| Progress | `runProgress(bar, ms, steps, labelEl)` → Promise (fills a `ui.progress` bar, shows step texts) |
 | Sound | `sound(file, volume)` — from assets/sounds/, silent if missing |
-| Popup | `popup({title, text, html, icon, buttons:[{label, onClick(p) → false keeps open}], modal, closable, onClose, skin})` → `{el, close}`. icon: `'error' \| 'warning' \| 'info'` (= icon-*.png) or a filename |
-| Windows | `openWindow({title, html, x, y, w, h, closable, icon, skin, className, onClose, persist})` → `{el, body, close, setTitle}`; `bringToFront(el)`; `makeMovable(el, handle)` for a hand-built window. Every window and popup (incl. the mail window) can be dragged by its title bar |
-| Apps | `openApp({id, ...openWindow options})` — app window for a desktop icon: non-modal, draggable, closable, one per `id` (re-opening brings it to front). Built-in apps: My Computer, Homework, New Folder (37) |
-| Desktop | `addIcon({id, label, asset, x, y, onClick, persist})` → el (`#icon-<id>`), `removeIcon(id)` |
+| Popup | `popup({title, text, html, icon, buttons:[{label, onClick(p) → false keeps open}], modal, closable, onClose, skin})` → `{el, close}`. icon: `'error' \| 'warning' \| 'info'` (= icon-*.png) or a filename. Draggable |
+| Windows | `openWindow({title, html, x, y, w, h, closable, icon, skin, className, onClose, persist})` → `{el, body, close, setTitle}`; `bringToFront(el)`; `makeMovable(el, handle)`. All windows/popups drag by their title bar |
+| Apps | `openApp({id, ...openWindow options})` — one window per `id`; `.created` is true only the first time |
+| Desktop | `addIcon({id, label, asset, x, y, onClick, onDoubleClick, persist})` → el (`#icon-<id>`, `.setLabel(t)`), `removeIcon(id)`, `addProp({id, asset, x, y, w, h, layer})` → el (`#prop-<id>`) |
 | Tray | `tray.add(id, label, onClick, {icon, text, title, persist})` (icon defaults to `tray-<id>.png`), `tray.setIcon(id, file)`, `tray.setText(id, text)`, `tray.get(id)`, `tray.remove(id)`. Built-in: `wifi`, `volume`, `battery` |
-| Drag | `makeDraggable(el, {onDrop(el, point) → true accepts, onMove, onStart, revert, handle})` → `{destroy, reset}`; `overlaps(a, b, minPx)` |
+| Drag | `dragGhost(el, {onDrop(point, el), onStart, canDrag, persist})` — drags a copy on the top layer (visible above windows); `makeDraggable(el, {onDrop, revert, …})` moves the element itself (stays in its layer); `hitTest(el, point)`; `overlaps(a, b, minPx)` |
 | Coords | `toGame(event)` or `toGame(clientX, clientY)` → game px; `rectOf(el)` → `{x, y, w, h}` in game px |
-| Juice | `highlight(selOrEl, ms)` (pulsing highlight-frame.png; 0 = until stage end) → off(); `shake()` |
+| Juice | `highlight(selOrEl, ms)` (pulsing highlight-frame.png; 0 = until stage end) → off(); `shake()`; `blackout(text, ms)` → Promise (black screen + text) |
+| Flow | `restartStage()` (cleanup + setup again, no popup), `send()`, `restart()` |
 | Clippy | `clippy.say(text, mood)`, `clippy.hide()`, `clippy.mood` |
-| Clock | `clock.add(min)`, `clock.minutes`, `clock.minutesLeft`, `clock.start/stop/freeze()` |
+| Clock | `clock.add(min)`, `clock.minutes`, `clock.minutesLeft`, `clock.start/stop/freeze/disableDeadline()` |
 | Cleanup | `track(fn)`, `on(target, type, fn, opts)`, `timeout(fn, ms)`, `interval(fn, ms)` |
-| Misc | `state` {}, `stage`, `stages`, `stageIndex`, `over`, `layers.{icons,windows,highlight,popups,fx,overlay}`, `make(tag, cls, text)`, `send()`, `restart()`, `CONFIG` |
+| Misc | `state` {}, `stage`, `stages`, `stageIndex`, `over`, `bounces`, `layers.{icons,windows,highlight,popups,fx,overlay}`, `make(tag, cls, text)`, `CONFIG` |
 
 ## Testing
 
 - Open `index.html` in Chrome. F12 console shows stage starts/passes and which art is missing.
-- `index.html?stage=7` — skip the title, start directly at stage 7. Add `&freeze` to stop the clock.
+- `index.html?stage=7` — skip the title, start directly at stage 7.
+  `&nodeadline=1` — 9:00 never fires you. `&freeze` — the clock doesn't move at all.
 - Console: `Game.debug.list()`, `Game.debug.skip()`, `Game.debug.goto(12)`, `Game.debug.missing()`.
-- No test framework. Verify by playing your stage: fail it once, fix it, pass it, and check the
-  next stage doesn't inherit leftovers.
+- No test framework. Verify by playing: fail the stage once, fix it, pass it, and check the
+  next stage doesn't inherit leftovers. README.md has a per-stage test checklist.

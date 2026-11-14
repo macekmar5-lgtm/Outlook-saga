@@ -13,7 +13,7 @@
  *    stops, and setup() owns the screen. check/cleanup are never called.
  *
  *  ASSETS
- *    bluescreen.png       full-screen blue background (1280x720, stretched)
+ *    bluescreen-bg.png    full-screen blue background (1280x720, stretched)
  *    bluescreen-face.png  the big sad face (200x170)
  *    sounds/bluescreen.wav
  * ========================================================================== */
@@ -30,7 +30,7 @@
     G.clippy.hide();
 
     const bsod = G.make('div', 'bsod');
-    G.setSkin(bsod, 'bluescreen.png');
+    G.setSkin(bsod, 'bluescreen-bg.png');
     bsod.innerHTML = `
       <div class="asset bsod-face" data-asset="bluescreen-face.png"></div>
       <p class="bsod-text">
@@ -75,7 +75,7 @@
     error: '',
     clippy: 'Finally! Let me just optimize one tiny thing...',
     hint: '',
-    assets: ['bluescreen.png', 'bluescreen-face.png'],
+    assets: ['bluescreen-bg.png', 'bluescreen-face.png'],
 
     setup(G) {
       G.popup({

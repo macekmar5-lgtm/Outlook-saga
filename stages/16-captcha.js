@@ -1,57 +1,78 @@
 /* =============================================================================
- *  STAGE 16 — Confirm you are human (captcha)                    STATUS: TODO
+ *  STAGE 16 — Confirm you are human (captcha)                    STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    A captcha window: "Select all images with your BOSS in them." 3x3 grid of
- *    images. Every single image is the boss (boss-1.png ... boss-9.png). The
- *    player must select all 9 and press Verify. Selecting fewer fails with
- *    "Look closer." Pass when all 9 were selected and verified.
+ *    Captcha window (captcha-frame.png): "Select all images with your boss in
+ *    them." 3x3 grid of boss-1.png ... boss-9.png (the printer in captcha
+ *    scenes), each with a checkbox overlay. Every image is the boss. Click all
+ *    9, then Verify. Fewer than 9: "Some of these are clearly your boss. Try
+ *    again." and all selections reset.  Pass: all 9 selected and verified.
  *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - G.state.captchaPassed = false
- *      - const win = G.openWindow({ title: 'Are you human?', w: 420, h: 500, closable: false })
- *        Grid background: a <div> with G.setSkin(grid, 'captcha-grid.png') laid out as a
- *        3x3 CSS grid. Tiles: G.asset(`boss-${i}.png`, { w: 120, h: 120 }) in a clickable
- *        wrapper. Selected = a G.asset('captcha-selected.png', { w: 120, h: 120 }) overlay
- *        on top of the tile (absolute, inset 0). No CSS borders/ticks — art only.
- *        Verify = G.ui.button('Verify', ...)
- *      - "Verify" button: if all 9 selected -> G.state.captchaPassed = true; win.close();
- *        else G.shake() + text "Look closer. Some of these are definitely your boss."
- *    check:   G.state.captchaPassed || 'Captcha not solved. Are you even human?'
- *    cleanup: delete G.state.captchaPassed
- *
- *  JUICE IDEAS
- *    - After 8 selected, one tile swaps to another boss photo and deselects itself.
- *    - Clippy: "I failed this captcha 400 times. I'm fine."
- *
- *  ASSETS: boss-1.png, boss-2.png, boss-3.png, boss-4.png, boss-5.png,
- *          boss-6.png, boss-7.png, boss-8.png, boss-9.png,
- *          captcha-grid.png (grid background, ~390x390), captcha-selected.png (120x120 overlay)
+ *  ASSETS: captcha-frame.png, boss-1.png ... boss-9.png, checkbox.png, checkbox-checked.png
  * ========================================================================== */
 
-Game.registerStage({
-  id: 16,
-  name: 'Captcha',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'panic',
-  error: 'Server needs to confirm you are human.',
-  clippy: "Prove you're human. I already know you're not a very GOOD one. Hahaha. HAHA. ha.",
-  hint: 'Every single picture is your boss. Select all 9, then press Verify.',
-  assets: ['boss-1.png', 'boss-2.png', 'boss-3.png', 'boss-4.png', 'boss-5.png',
-           'boss-6.png', 'boss-7.png', 'boss-8.png', 'boss-9.png',
-           'captcha-grid.png', 'captcha-selected.png'],
+(function () {
+  Game.registerStage({
+    id: 16,
+    name: 'Captcha',
+    vibe: 'panic',
+    error: 'Server needs to confirm you are human.',
+    clippy: "Prove you're human. HA. HAHA. I failed this captcha 400 times. Every picture is the printer. EVERY. PICTURE.",
+    hint: 'Every single picture is your boss (the printer). Select all 9, then press Verify.',
+    retry: ['THE SERVER STILL THINKS YOU ARE A ROBOT. Honestly? Fair.'],
+    assets: [
+      'captcha-frame.png', 'checkbox.png', 'checkbox-checked.png',
+      'boss-1.png', 'boss-2.png', 'boss-3.png', 'boss-4.png', 'boss-5.png',
+      'boss-6.png', 'boss-7.png', 'boss-8.png', 'boss-9.png',
+    ],
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+    setup(G) {
+      G.state.captcha = false;
+      const win = G.openWindow({ title: 'Are you human?', x: 410, y: 40, w: 440, h: 590, closable: false });
+      const col = G.make('div', 'stage-center');
+      const grid = G.make('div', 'captcha-grid');
+      G.setSkin(grid, 'captcha-frame.png');
+      const msg = G.make('div', 'stage-msg');
 
-  check(G) {
-    // TODO
-    return true;
-  },
+      const tiles = [];
+      for (let i = 1; i <= 9; i++) {
+        const tile = G.make('div', 'captcha-tile clickable');
+        const check = G.make('span', 'captcha-check');
+        G.setSkin(check, 'checkbox.png');
+        tile.append(G.asset(`boss-${i}.png`, { w: 116, h: 116 }), check);
+        tile.selected = false;
+        tile.setSelected = (v) => {
+          tile.selected = v;
+          G.setSkin(check, v ? 'checkbox-checked.png' : 'checkbox.png');
+        };
+        tile.addEventListener('click', () => tile.setSelected(!tile.selected));
+        tiles.push(tile);
+        grid.appendChild(tile);
+      }
 
-  cleanup(G) {
-    // TODO
-  },
-});
+      const verify = G.ui.button('Verify', () => {
+        const n = tiles.filter((t) => t.selected).length;
+        if (n < 9) {
+          msg.textContent = 'Some of these are clearly your boss. Try again.';
+          tiles.forEach((t) => t.setSelected(false));
+          G.shake();
+          return;
+        }
+        G.state.captcha = true;
+        win.close();
+        G.clippy.say('VERIFIED HUMAN. The bar was on the floor and you cleared it. Barely.', 'panic');
+      });
+
+      col.append(G.make('div', 'mood-label', 'Select all images with your boss in them.'), grid, verify, msg);
+      win.body.appendChild(col);
+    },
+
+    check(G) {
+      return G.state.captcha || 'Captcha not solved. Are you even human?';
+    },
+
+    cleanup(G) {
+      delete G.state.captcha;
+    },
+  });
+})();

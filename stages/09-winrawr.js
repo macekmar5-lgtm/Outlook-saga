@@ -1,55 +1,101 @@
 /* =============================================================================
- *  STAGE 9 — WinRAWR license exceeded                            STATUS: TODO
+ *  STAGE 9 — WinRAWR license exceeded                            STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    A WinRAWR nag window pops up over the Send button: "Your 40-day trial
- *    expired 3,652 days ago. Please buy WinRAWR." It has two buttons:
- *      - "Buy now (€49.99)" — runs away from the mouse cursor, can't be clicked
- *      - "Continue trial"   — small and grey, the real way out
- *    The window can't be closed with X. Pass after clicking "Continue trial".
- *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - G.state.winrawrDismissed = false
- *      - const win = G.openWindow({ title: 'WinRAWR - Trial Expired', closable: false,
- *                                   x: 230, y: 40, w: 440, h: 300 })   // covers the Send button
- *        content: G.asset('winrawr-logo.png', { w: 120, h: 120 }), nag text, and two
- *        G.ui.button()s (optionally custom art: { skin: 'winrawr-buy.png' })
- *      - Runaway Buy button: position: absolute inside win.body;
- *        G.on(win.body, 'pointermove', e => { const p = G.toGame(e); if close to the
- *        button (use G.rectOf(btn)) -> move it to a random spot inside win.body })
- *      - "Continue trial": G.state.winrawrDismissed = true; win.close()
- *        maybe Clippy: "Continuing trial. Like every human who ever lived."
- *    check:   G.state.winrawrDismissed || 'WinRAWR is still nagging you.'
- *    cleanup: delete G.state.winrawrDismissed
- *
- *  JUICE IDEAS
- *    - Every 10 s the nag window re-opens until dismissed ("Did you mean: Buy?").
- *    - If the player somehow clicks Buy: "Payment declined. Your card is also late."
+ *    A WinRAWR nag window: "Your 40-day free trial ended 2,847 days ago."
+ *    "Buy license" runs away whenever the mouse gets within 80px. Click
+ *    "Continue trial": the nag closes, then reopens once ("Are you sure?
+ *    WinRAWR is sad. :(") — click "Continue trial" again to close it for good.
+ *    Sending while the nag is open fails.  Pass: nag dismissed for good.
  *
  *  ASSETS: winrawr-logo.png
  * ========================================================================== */
 
-Game.registerStage({
-  id: 9,
-  name: 'WinRAWR',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'annoyed',
-  error: 'WinRAWR license exceeded. Zipped attachments cannot be sent.',
-  clippy: 'Ah, WinRAWR. Everyone has a free trial. Nobody has ever bought it. Nobody. Ever.',
-  hint: 'Don\'t chase the Buy button. Click the small "Continue trial" button in the WinRAWR window.',
-  assets: ['winrawr-logo.png'],
+(function () {
+  const FLEE_DISTANCE = 80;
+  const W = 460;
+  const H = 300;
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+  function openNag(G, sad) {
+    const win = G.openWindow({ title: 'WinRAWR - Trial Expired', closable: false, w: W, h: H });
+    G.state.winrawrWin = win;
 
-  check(G) {
-    // TODO
-    return true;
-  },
+    const body = G.make('div', 'winrawr-body');
+    const logo = G.asset('winrawr-logo.png', { w: 100, h: 100, className: 'winrawr-logo' });
+    const text = G.make('div', 'winrawr-text');
+    if (sad) {
+      text.append('Are you sure?\nWinRAWR is sad.\n', G.make('div', 'winrawr-face', ':('));
+    } else {
+      text.textContent = 'Your 40-day free trial ended 2,847 days ago.\n\nPlease buy a license.';
+    }
 
-  cleanup(G) {
-    // TODO
-  },
-});
+    const buy = G.ui.button('Buy license', () =>
+      G.popup({ title: 'WinRAWR', icon: 'error', text: 'Payment declined.\n\nYour card is also late.' })
+    );
+    buy.style.left = '60px';
+    buy.style.top = '160px';
+    buy.style.minWidth = '120px';
+
+    const cont = G.ui.button('Continue trial', () => {
+      win.close();
+      G.state.winrawrWin = null;
+      if (!sad) {
+        G.timeout(() => openNag(G, true), 700);
+      } else {
+        G.state.winrawrDone = true;
+        G.clippy.say('WinRAWR is sad. You did that. I hope you are happy.', 'annoyed');
+      }
+    });
+    cont.style.left = '290px';
+    cont.style.top = '200px';
+
+    body.append(logo, text, buy, cont);
+    win.body.appendChild(body);
+
+    // The Buy button runs away from the cursor.
+    G.on(window, 'pointermove', (e) => {
+      if (!buy.isConnected) return;
+      const p = G.toGame(e);
+      const r = G.rectOf(buy);
+      if (Math.hypot(p.x - (r.x + r.w / 2), p.y - (r.y + r.h / 2)) >= FLEE_DISTANCE) return;
+      const box = G.rectOf(body);
+      for (let tries = 0; tries < 20; tries++) {
+        const left = Math.random() * Math.max(0, box.w - r.w);
+        const top = Math.random() * Math.max(0, box.h - r.h);
+        const cx = box.x + left + r.w / 2;
+        const cy = box.y + top + r.h / 2;
+        if (Math.hypot(p.x - cx, p.y - cy) > FLEE_DISTANCE + 40) {
+          buy.style.left = left + 'px';
+          buy.style.top = top + 'px';
+          break;
+        }
+      }
+    });
+  }
+
+  Game.registerStage({
+    id: 9,
+    name: 'WinRAWR',
+    vibe: 'annoyed',
+    error: 'WinRAWR license exceeded. Zipped attachments cannot be sent.',
+    clippy: 'Ah, WinRAWR. Everyone has a free trial. Nobody has EVER bought it. Please do not be the first. It would upset the balance.',
+    hint: 'Don\'t chase "Buy license". Click "Continue trial". Twice. WinRAWR does not give up easily.',
+    retry: ['WinRAWR is still open. Nobody gets past WinRAWR on the first try.', 'Continue. The. Trial.'],
+    assets: ['winrawr-logo.png'],
+
+    setup(G) {
+      G.state.winrawrDone = false;
+      openNag(G, false);
+    },
+
+    check(G) {
+      if (G.state.winrawrDone) return true;
+      return 'WinRAWR is still nagging you. Sending is blocked until you continue the trial.';
+    },
+
+    cleanup(G) {
+      delete G.state.winrawrDone;
+      delete G.state.winrawrWin;
+    },
+  });
+})();

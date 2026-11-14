@@ -1,55 +1,81 @@
 /* =============================================================================
- *  STAGE 10 — Autocorrect improved your email                    STATUS: TODO
+ *  STAGE 10 — Autocorrect improved your email                    STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    "Autocorrect" rewrote the body: it's now full of "sorry" (e.g. "Hi sorry
- *    Boss sorry, I'm sorry going to be sorry late..."). The player clicks each
- *    "sorry" to delete it. Some of them come back as "apologies" (which must
- *    also be clicked). Pass when no "sorry"/"apologies" is left.
+ *    "Autocorrect" inserted "sorry" after about every 4th word (at least 8x).
+ *    The body becomes a clickable word view (Game.wordView). Click each red
+ *    "sorry" to delete it — but every 3rd one comes back as "apologies", which
+ *    must also be clicked away.  Pass: no "sorry" or "apologies" left.
+ *    Cleanup: the normal textarea returns with the cleaned text.
  *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - The body is a <textarea>, which can't have clickable words. So: hide
- *        G.mail.el.body and put a plain <div> inside G.mail.el.bodyWrap (which
- *        already has the input-box.png art) with flex: 1; overflow: auto;
- *        white-space: pre-wrap; and the same font as the textarea.
- *      - Build it from G.mail.body with " sorry" inserted after ~every 3rd word,
- *        each one a <span class="sorry clickable">sorry</span>.
- *      - Click a span: remove it; 30% chance it's replaced by an "apologies" span
- *        (which, when clicked, is just removed).
- *      - G.track(() => { overlay.remove(); G.mail.el.body.style.display = ''; })
- *    check:   overlay.querySelectorAll('.sorry').length === 0 ||
- *             `There are still ${n} apologies in your email.`
- *    cleanup: write the cleaned text back: G.mail.body = overlay.textContent
- *             (do this in cleanup(), BEFORE the tracked overlay removal runs).
- *
- *  JUICE IDEAS
- *    - Clippy's line itself is full of "sorry".
- *    - The last "sorry" runs away once.
- *
- *  ASSETS: none
+ *  ASSETS: none (text only; uses the body-paper.png body)
  * ========================================================================== */
 
-Game.registerStage({
-  id: 10,
-  name: 'Autocorrect',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'angry',
-  error: 'Autocorrect improved your email. Too many apologies detected (47).',
-  clippy: "I fixed your tone! You're welcome. Sorry. Sorry, sorry. SORRY. ...Sorry.",
-  hint: 'Click every "sorry" in the email to delete it. Watch out, some come back as "apologies".',
-  assets: [],
+(function () {
+  const MIN_SORRIES = 8;
+  const FILLER =
+    '\n\nI really feel terrible about the delay and the bus and the alarm clock and the fridge ' +
+    'and basically everything else that happened this morning before I left the house.';
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+  /** Remove token i and the whitespace token in front of it. */
+  function removeToken(view, i) {
+    const before = view.tokens[i - 1];
+    if (before && !before.tag && /^\s+$/.test(before.text)) view.tokens.splice(i - 1, 2);
+    else view.tokens.splice(i, 1);
+  }
 
-  check(G) {
-    // TODO
-    return true;
-  },
+  Game.registerStage({
+    id: 10,
+    name: 'Autocorrect',
+    vibe: 'angry',
+    error: 'Autocorrect improved your email. Too many apologies detected.',
+    clippy: 'I made your email more apologetic. Sorry. You are welcome. Sorry. I said sorry. SORRY.',
+    hint: 'Click every red "sorry" in the email to delete it. Some come back as "apologies" — click those too.',
+    retry: ['Still sorry. So, so sorry.', 'The printer does not accept apologies. Or sorries. Click them all.'],
+    assets: [],
 
-  cleanup(G) {
-    // TODO
-  },
-});
+    setup(G) {
+      let body = G.mail.body.trim() ? G.mail.body : Game.CONFIG.DEFAULT_BODY;
+      let tokens = Game.wordView.split(body);
+      if (tokens.filter((t) => /\S/.test(t.text)).length < MIN_SORRIES * 4) {
+        body += FILLER;
+        tokens = Game.wordView.split(body);
+      }
+
+      // Insert " sorry" after every 4th word.
+      const out = [];
+      let words = 0;
+      tokens.forEach((t) => {
+        out.push(t);
+        if (/\S/.test(t.text) && ++words % 4 === 0) out.push({ text: ' ' }, { text: 'sorry', tag: 'sorry' });
+      });
+
+      let clicked = 0;
+      G.state.sorryView = G.wordView(out, (i, token, view) => {
+        if (token.tag === 'sorry') {
+          clicked++;
+          if (clicked % 3 === 0) {
+            token.text = 'apologies';
+            token.tag = 'apologies';
+            return;
+          }
+        }
+        removeToken(view, i);
+        if (!view.count('sorry') && !view.count('apologies')) {
+          G.clippy.say('No more apologies. You monster. Fine. Send it.', 'angry');
+        }
+      });
+    },
+
+    check(G) {
+      const view = G.state.sorryView;
+      const n = view.count('sorry') + view.count('apologies');
+      return n === 0 || `There are still ${n} apologies in your email.`;
+    },
+
+    cleanup(G) {
+      G.state.sorryView.close(); // writes the cleaned text back and restores the textarea
+      delete G.state.sorryView;
+    },
+  });
+})();

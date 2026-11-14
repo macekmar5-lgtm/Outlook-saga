@@ -1,49 +1,62 @@
 /* =============================================================================
- *  STAGE 5 — Email exceeds the character limit                   STATUS: TODO
+ *  STAGE 5 — Email exceeds the character limit                   STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    The server now has a character limit. The email body suddenly contains a
- *    huge auto-added legal disclaimer / signature, so it's way over. The player
- *    deletes text in the body until the live counter (bottom of the mail
- *    window) is under the limit. Pass when body length <= limit.
+ *    Clippy "helpfully" added a huge paragraph to the body (life story, bus
+ *    timetable, an apology to the printer), so it's ~1400 characters. The live
+ *    counter under the body shows "1400 / 500" in red. Delete text normally.
+ *    Pass: body length between 20 and 500 characters.
  *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - G.mail.charLimit = 280   (the counter now shows "512 / 280" in red)
- *      - G.mail.body += '\n\n' + a long silly disclaimer, e.g.
- *        "CONFIDENTIALITY NOTICE: This email and any cat attached to it..." (~600 chars)
- *      - G.highlight('#char-counter', 4000)
- *    check:   G.mail.body.length <= G.mail.charLimit ||
- *             `Still ${G.mail.body.length - G.mail.charLimit} characters too long.`
- *    cleanup: G.mail.charLimit = null
- *
- *  JUICE IDEAS
- *    - If the player deletes EVERYTHING: check fails with "Email is empty. Bold."
- *    - Clippy counts down with them when they're close.
- *
- *  ASSETS: none
+ *  ASSETS: char-counter-bg.png (shared mail client art)
  * ========================================================================== */
 
-Game.registerStage({
-  id: 5,
-  name: 'Character limit',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'annoyed',
-  error: 'Email exceeds the character limit (280 characters).',
-  clippy: 'Your email is too long. Nobody reads past the first line anyway. Trust me, I am an assistant.',
-  hint: 'Delete text from the email body until the counter at the bottom is under the limit.',
-  assets: [],
+(function () {
+  const LIMIT = 500;
+  const MIN = 20;
+  const TARGET = 1400;
+  const CLIPPY_ADDITION =
+    '\n\nP.S. (added by Clippy, you are welcome) Some helpful context about me: I was born on a ' +
+    'Tuesday, which explains a lot. As a child I wanted to be a stapler. My hobbies include waiting ' +
+    'for the bus, missing the bus, and describing the bus to people who did not ask. ' +
+    'For your convenience, here is the full bus timetable: 07:02, 07:17, 07:32 (cancelled), ' +
+    '07:47 (also cancelled), 08:02 (left early, out of spite), 08:17 (full), 08:32 (that one is ' +
+    'me, running), 08:47 (I am still running). ' +
+    'Dear Printer, I would also like to formally apologise for the time I printed 400 pages of ' +
+    'cat pictures on a Friday. And for calling you "the beige box". And for the paper jam in ' +
+    'March, which we both know was not entirely my fault. You have always been the most reliable ' +
+    'member of this team, except when you are out of cyan, which is always. ' +
+    'In conclusion, I am late, I am sorry, and I am a person of many layers, like a lasagna, or ' +
+    'a very old toner cartridge. Thank you for reading this far. Nobody ever reads this far. ' +
+    'If you did, please print this paragraph and keep it close to your heart (paper tray 2).';
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+  Game.registerStage({
+    id: 5,
+    name: 'Character limit',
+    vibe: 'happy',
+    error: `Email exceeds the character limit (${LIMIT}).`,
+    clippy: "I helpfully added some context to your email! Your life story, the bus timetable and an apology to the printer. Now it's a teeny bit long. Oopsie! :)",
+    hint: `Delete text from the email body until the counter below it shows ${LIMIT} or less (but keep at least ${MIN} characters).`,
+    retry: ['Still too long! Nobody reads past the first line anyway. :)', 'Delete, delete, delete. Have fun!'],
+    assets: ['char-counter-bg.png'],
 
-  check(G) {
-    // TODO
-    return true;
-  },
+    setup(G) {
+      let body = G.mail.body.trim() ? G.mail.body : Game.CONFIG.DEFAULT_BODY;
+      body += CLIPPY_ADDITION;
+      while (body.length < TARGET) body += ' Also, sorry.';
+      G.mail.body = body;
+      G.mail.charLimit = LIMIT;
+      G.timeout(() => G.highlight(G.mail.el.counter, 3000), 600);
+    },
 
-  cleanup(G) {
-    // TODO
-  },
-});
+    check(G) {
+      const n = G.mail.body.length;
+      if (n > LIMIT) return `Still ${n - LIMIT} characters too long (${n} / ${LIMIT}).`;
+      if (n < MIN) return `The email is basically empty. The printer needs at least ${MIN} characters of excuse.`;
+      return true;
+    },
+
+    cleanup(G) {
+      G.mail.charLimit = null;
+    },
+  });
+})();

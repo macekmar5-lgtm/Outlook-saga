@@ -1,56 +1,92 @@
 /* =============================================================================
- *  STAGE 6 — Photo attachments in the wrong format               STATUS: TODO
+ *  STAGE 6 — Photo attachments in the wrong format               STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    The cat photo is a JPG, the server only accepts PNG. A "Converter 3000"
- *    icon appears on the desktop. The player opens it, picks cat.jpg and
- *    presses Convert; the attachment becomes cat.png. Pass when no attachment
- *    ends in .jpg.
+ *    The printer only reads PNG. A "Convertinator 3000" icon appears on the
+ *    desktop (top right). Double-click it: a window with a drop zone opens.
+ *    Drag the cat.jpg chip from the email into the drop zone: a progress bar
+ *    runs with silly steps, then the attachment is renamed cat.png.
+ *    Pass: no attachment ends in .jpg.
  *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - Make sure there's a JPG attached: if (!G.attachments.get('cat.jpg'))
- *          G.attachments.add('cat.jpg', '12 KB', 'file-photo.png')
- *      - G.addIcon({ id: 'converter', label: 'Converter 3000', asset: 'icon-converter.png',
- *                    x: 1060, y: 40, onClick: openConverter })
- *      - openConverter(): G.openApp({ id: 'converter', title: 'Converter 3000 (Trial)',
- *                                     icon: 'icon-converter.png', w: 380, h: 260 })
- *        (openApp = draggable app window, only one at a time)
- *        with one G.ui.button per attachment to pick it (NO native <select> — the
- *        browser draws those), format buttons, and G.ui.button('Convert', ...).
- *        Convert: G.ui.progress() fake progress, then G.attachments.remove('cat.jpg');
- *                 G.attachments.add('cat.png', '12 KB', 'file-photo.png')
- *    check:   !G.attachments.list().some(a => /\.jpe?g$/i.test(a.name)) ||
- *             'cat.jpg is still a JPG.'
- *    cleanup: icon + window auto-removed.
- *
- *  JUICE IDEAS
- *    - First Convert attempt outputs "cat.jpg.png.jpg" and needs a second go.
- *    - The converter offers useless formats: .BMP, .GIF, .DOCX, .MP3, .CAT
- *
- *  ASSETS: icon-converter.png, file-photo.png
+ *  ASSETS: icon-converter.png, drop-zone.png, progress-bar.png, progress-fill.png
  * ========================================================================== */
 
-Game.registerStage({
-  id: 6,
-  name: 'Wrong format',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'annoyed',
-  error: 'Photo attachments are in the wrong format. Please use PNG.',
-  clippy: "JPG? In this economy? The server only takes PNG. There's a converter on the desktop. You're welcome.",
-  hint: 'Click "Converter 3000" on the desktop, choose cat.jpg and convert it to PNG.',
-  assets: ['icon-converter.png', 'file-photo.png'],
+(function () {
+  const STEPS = ['Removing the J...', 'Adding the N...', 'Polishing pixels...', 'Done!'];
+  const isJpg = (name) => /\.jpe?g$/i.test(name);
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+  function openConverter(G) {
+    const win = G.openApp({
+      id: 'converter', title: 'Convertinator 3000 (Trial)', icon: 'icon-converter.png',
+      x: 690, y: 300, w: 330, h: 290,
+    });
+    if (!win.created) return;
 
-  check(G) {
-    // TODO
-    return true;
-  },
+    const col = G.make('div', 'stage-col');
+    const zone = G.make('div', 'drop-zone', 'Drop a .jpg attachment here.\nIt will come out as .png.');
+    zone.style.whiteSpace = 'pre-line';
+    G.setSkin(zone, 'drop-zone.png');
+    const bar = G.ui.progress(0);
+    bar.classList.add('hidden');
+    const label = G.make('div', 'stage-msg', 'JPG  ->  PNG');
+    col.append(zone, bar, label);
+    win.body.appendChild(col);
+    G.state.converterZone = zone;
+    G.state.converterUi = { bar, label };
+  }
 
-  cleanup(G) {
-    // TODO
-  },
-});
+  Game.registerStage({
+    id: 6,
+    name: 'Wrong format',
+    vibe: 'happy',
+    error: 'Photo attachments are in the wrong format. Please use PNG.',
+    clippy: 'The printer only reads PNG. Old printers are like that, bless them. There is a converter on the desktop now. Double-click it! :)',
+    hint: 'Double-click "Convertinator 3000" (top right of the desktop), then drag the cat.jpg attachment into its drop zone.',
+    retry: ['Still a JPG! The converter is top right. Double-click. Like it is 2003.'],
+    assets: ['icon-converter.png', 'drop-zone.png', 'progress-bar.png', 'progress-fill.png'],
+
+    setup(G) {
+      G.state.converting = false;
+      if (!G.attachments.list().some((a) => isJpg(a.name))) G.attachments.add('cat.jpg', '3 MB', 'file-photo.png');
+
+      const icon = G.addIcon({
+        id: 'converter', label: 'Convertinator 3000', asset: 'icon-converter.png', x: 1080, y: 40,
+        onClick: () => G.clippy.say('Double-click. It is 2003. We double-click here.', 'happy'),
+        onDoubleClick: () => openConverter(G),
+      });
+      G.timeout(() => G.highlight(icon, 3000), 600);
+
+      G.dragAttachments((att, point) => {
+        const zone = G.state.converterZone;
+        if (!zone || !zone.isConnected || !G.hitTest(zone, point)) return;
+        if (!isJpg(att.name)) {
+          G.clippy.say("That's not a JPG. Even I know that, and I'm a paperclip.", 'happy');
+          return;
+        }
+        if (G.state.converting) return;
+        G.state.converting = true;
+        const { bar, label } = G.state.converterUi;
+        bar.classList.remove('hidden');
+        G.runProgress(bar, 3000, STEPS, label).then(() => {
+          const newName = att.name.replace(/\.jpe?g$/i, '.png');
+          G.attachments.rename(att.name, newName);
+          G.state.converting = false;
+          label.textContent = `Done: ${newName}`;
+          G.clippy.say(`Behold: ${newName}. Same cat, more N.`, 'happy');
+        });
+      });
+    },
+
+    check(G) {
+      const jpg = G.attachments.list().find((a) => isJpg(a.name));
+      if (G.state.converting) return 'Still converting. Patience. Polishing pixels takes time.';
+      return !jpg || `${jpg.name} is still a JPG. The printer only reads PNG.`;
+    },
+
+    cleanup(G) {
+      delete G.state.converting;
+      delete G.state.converterZone;
+      delete G.state.converterUi;
+    },
+  });
+})();

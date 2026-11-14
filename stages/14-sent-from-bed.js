@@ -1,53 +1,72 @@
 /* =============================================================================
- *  STAGE 14 — Sending from bed                                   STATUS: TODO
+ *  STAGE 14 — Sending from bed                                   STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    The email "detected" that the player is in bed. A WebCam 2000 icon
- *    appears on the desktop. The player opens it: the preview shows them in
- *    bed (webcam-bed.png). They switch the virtual background to "Office"
- *    (webcam-office.png). Pass once the office background is on.
- *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - G.state.officeBackground = false
- *      - G.addIcon({ id: 'webcam', label: 'WebCam 2000', asset: 'icon-webcam.png',
- *                    x: 1060, y: 40, onClick: openWebcam })
- *      - openWebcam(): G.openApp({ id: 'webcam', title: 'WebCam 2000 - LIVE',
- *                                  icon: 'icon-webcam.png', w: 460, h: 400 })
- *          preview = G.asset('webcam-bed.png', { w: 420, h: 280 })
- *          background picker: G.ui.button() x4: "None", "Beach", "Office", "Space"
- *          "Office" -> G.setAsset(preview, 'webcam-office.png'); G.state.officeBackground = true
- *          others   -> Clippy comments ("A beach? On a Tuesday?") and stays in bed
- *    check:   G.state.officeBackground || 'You are still visibly in bed.'
- *    cleanup: delete G.state.officeBackground
- *
- *  JUICE IDEAS
- *    - The "Office" option is greyed out until you scroll the list.
- *    - The webcam preview slightly wobbles like a real stream.
+ *    A "Webcam" icon appears on the desktop (top right). Open it: the webcam
+ *    shows you in bed (webcam-bed.png). Press "Background effects" and pick:
+ *      None   -> just you, in bed
+ *      Blur   -> blurry bed ("Still a bed. Just a blurry bed.")
+ *      Office -> webcam-office.png
+ *    Pass: Office background is active.
  *
  *  ASSETS: icon-webcam.png, webcam-bed.png, webcam-office.png
  * ========================================================================== */
 
-Game.registerStage({
-  id: 14,
-  name: 'Sent from bed',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'angry',
-  error: 'Email detected that you are sending it from bed.',
-  clippy: 'Are you... in BED?! In THOSE pajamas?! Open the webcam app and turn on the office background before anyone sees!',
-  hint: 'Open "WebCam 2000" on the desktop and switch the background to "Office".',
-  assets: ['icon-webcam.png', 'webcam-bed.png', 'webcam-office.png'],
+(function () {
+  function openWebcam(G) {
+    const win = G.openApp({ id: 'webcam', title: 'Webcam - LIVE', icon: 'icon-webcam.png', x: 560, y: 90, w: 460, h: 440 });
+    if (!win.created) return;
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+    const col = G.make('div', 'stage-center');
+    const office = G.state.background === 'office';
+    const preview = G.asset(office ? 'webcam-office.png' : 'webcam-bed.png', { w: 420, h: 280, className: 'webcam-preview' });
+    preview.classList.toggle('blurry', G.state.background === 'blur');
+    const options = G.make('div', 'stage-row hidden');
 
-  check(G) {
-    // TODO
-    return true;
-  },
+    const set = (mode) => {
+      G.state.background = mode;
+      G.setAsset(preview, mode === 'office' ? 'webcam-office.png' : 'webcam-bed.png');
+      preview.classList.toggle('blurry', mode === 'blur');
+      if (mode === 'blur') G.clippy.say('Still a bed. Just a blurry bed.', 'panic');
+      if (mode === 'none') G.clippy.say('NONE?! THE PRINTER CAN SEE YOUR PILLOW.', 'panic');
+      if (mode === 'office') G.clippy.say('LOOK AT YOU. SO EMPLOYED. SO NOT IN BED. Send it before the illusion breaks.', 'panic');
+    };
+    options.append(
+      G.ui.button('None', () => set('none')),
+      G.ui.button('Blur', () => set('blur')),
+      G.ui.button('Office', () => set('office'))
+    );
+    const effects = G.ui.button('Background effects', () => options.classList.toggle('hidden'));
+    effects.style.minWidth = '170px';
 
-  cleanup(G) {
-    // TODO
-  },
-});
+    col.append(preview, effects, options);
+    win.body.appendChild(col);
+  }
+
+  Game.registerStage({
+    id: 14,
+    name: 'Sent from bed',
+    vibe: 'panic',
+    error: 'Email detected that you are sending it from bed.',
+    clippy: 'ARE YOU IN BED?! IN THOSE PAJAMAS?! Open the webcam app RIGHT NOW and turn on the office background before the printer SEES!',
+    hint: 'Click "Webcam" (top right of the desktop), press "Background effects", choose "Office".',
+    retry: ['YOU ARE STILL VISIBLY IN BED.', 'Blur is not a solution. Blur is a lifestyle. Pick OFFICE.'],
+    assets: ['icon-webcam.png', 'webcam-bed.png', 'webcam-office.png'],
+
+    setup(G) {
+      G.state.background = 'none';
+      const icon = G.addIcon({ id: 'webcam', label: 'Webcam', asset: 'icon-webcam.png', x: 1080, y: 40, onClick: () => openWebcam(G) });
+      G.timeout(() => G.highlight(icon, 3000), 600);
+    },
+
+    check(G) {
+      if (G.state.background === 'office') return true;
+      if (G.state.background === 'blur') return 'You are a blurry person in a blurry bed. Still a bed.';
+      return 'You are still visibly in bed.';
+    },
+
+    cleanup(G) {
+      delete G.state.background;
+    },
+  });
+})();

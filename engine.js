@@ -10,11 +10,11 @@
  *     1. CONFIG ............ all tunable numbers (clock, costs, paths, timings)
  *     2. Core state + stage registry
  *     3. Screen scaling + coordinates
- *     4. Assets, OS skin & sound
+ *     4. Art (pictures + skins), UI kit & sound
  *     5. Stage-scoped cleanup (Game.track & friends)
- *     6. UI helpers (popup, windows, icons, tray, drag, highlight, shake)
+ *     6. UI helpers (popups, windows, apps, icons, props, tray, drag, juice)
  *     7. Clippy
- *     8. Mail + attachments
+ *     8. Mail (fields, attachments, word view, status bar, Bounced counter)
  *     9. Clock
  *    10. Game flow (send -> bounce -> stages -> ending)
  *    11. Debug tools
@@ -38,7 +38,8 @@ const CONFIG = {
   HEIGHT: 720,
 
   // ---- Clock (in minutes after midnight) ----
-  START_TIME: 8 * 60 + 30,       // 8:30 — the clock starts here
+  START_TIME: 8 * 60,            // 8:00 — the clock starts here. (8:30 was unwinnable: 18 stages =
+                                 //  18+ bounces = 18+ minutes, plus the clock ticking on its own.)
   DEADLINE: 9 * 60,              // 9:00 — "You're fired"
   SEND_COST_MINUTES: 1,          // every press of Send costs this much
   HINT_COST_MINUTES: 1,          // every click on Clippy (hint) costs this much
@@ -46,14 +47,15 @@ const CONFIG = {
   WARNING_MINUTES_LEFT: 5,       // clock starts blinking when this few minutes are left
 
   // ---- Mail ----
-  BOSS_ADDRESS: 'boss@megacorp.biz',
-  PLAYER_ADDRESS: 'you@megacorp.biz',
+  BOSS_ADDRESS: 'printer@company.com', // the boss is a grumpy printer
+  PLAYER_ADDRESS: 'you@company.com',
   DEFAULT_BODY:
-    'Hi Boss,\n\n' +
+    'Dear Printer,\n\n' +
     "I'm going to be a few minutes late today. My alarm clock bounced off the wall " +
     'and rolled under the fridge.\n\n' +
-    "I'll be there by 9:00. Promise.\n\n" +
+    "I'll be at my desk by 9:00. Please don't jam.\n\n" +
     'Best regards,\nMe',
+  STATUS_TEXT: 'Connected (barely)',
 
   // ---- Paths (RELATIVE on purpose: a leading "/" breaks file:// and itch.io) ----
   ASSET_PATH: 'assets/',
@@ -76,8 +78,9 @@ const Game = {
   stageIndex: -1,   // index of the active stage in Game.stages (-1 = none yet)
   started: false,   // true once the player pressed Start on the title screen
   over: false,      // true after being fired or reaching the final stage
+  bounces: 0,       // how many times the email bounced (shown on the Bounced folder)
   scale: 1,         // current screen scale factor (set by fit())
-  layers: {},       // DOM layers: icons, windows, popups, fx, overlay (filled by init)
+  layers: {},       // DOM layers: icons, windows, highlight, popups, fx, overlay (filled by init)
 };
 window.Game = Game;
 
@@ -167,8 +170,16 @@ window.Game = Game;
     return { x: p.x, y: p.y, w: r.width / Game.scale, h: r.height / Game.scale };
   };
 
+  /** True if a game-coordinate point ({x, y}, e.g. from a drop) is inside the element. */
+  Game.hitTest = function (target, point) {
+    const el = resolveEl(target);
+    if (!el || !el.isConnected || !point) return false;
+    const r = Game.rectOf(el);
+    return point.x >= r.x && point.x <= r.x + r.w && point.y >= r.y && point.y <= r.y + r.h;
+  };
+
   /* ===========================================================================
-   *  4. ASSETS, SKINS & SOUND
+   *  4. ART, UI KIT & SOUND
    *  RULE: all art is hand-made by the team. Never generate images, SVG or
    *  CSS-drawn graphics. Missing art shows a dashed placeholder with the filename.
    *
@@ -179,6 +190,11 @@ window.Game = Game;
    *             --slice-button entry, otherwise stretched). Swap it with
    *             Game.setSkin(el, 'other.png'). data-skin-pressed="x.png" swaps
    *             automatically while the mouse button is held on the element.
+   *
+   *  Files are loaded by FILENAME. The browser looks at the file's content, so a
+   *  JPG, WebP or AVIF saved with a .png name still works. HEIC (iPhone) does
+   *  NOT work in browsers — run tools/fix-art.ps1. A file that fails to load
+   *  never crashes the game: it just shows the placeholder.
    * ======================================================================== */
   const missingAssets = new Set();
   const baseName = (file) => String(file).replace(/\.[a-z0-9]+$/i, '');
@@ -271,7 +287,7 @@ window.Game = Game;
 
   /** Check every data-skin / data-skin-pressed inside `scope`. */
   function scanSkins(scope) {
-    if (scope.nodeType !== 1) return;
+    if (!scope || scope.nodeType !== 1) return;
     if (scope.dataset.skin) ensureSkin(scope.dataset.skin);
     if (scope.dataset.skinPressed) ensureSkin(scope.dataset.skinPressed);
     scope.querySelectorAll('[data-skin], [data-skin-pressed]').forEach((el) => {
@@ -297,7 +313,7 @@ window.Game = Game;
     const raw = getComputedStyle(document.documentElement).getPropertyValue('--os-assets');
     const listed = Array.from(raw.matchAll(/["']([^"']+)["']/g), (match) => match[1].trim());
     listed.forEach((file) => {
-      if (/^cursor/.test(file)) {
+      if (/cursor/.test(file)) {
         // Cursors aren't surfaces: just mark them found so style.css can use them.
         const img = new Image();
         img.onload = () => markFound(file);
@@ -335,9 +351,9 @@ window.Game = Game;
     window.addEventListener('pointercancel', release, true);
 
     setTimeout(() => {
-      const missing = listed.filter((f) => skinState.get(f) === 'missing' || (missingAssets.has(f)));
+      const missing = listed.filter((f) => skinState.get(f) === 'missing' || missingAssets.has(f));
       console.info(`[Game] OS art: ${listed.length - missing.length}/${listed.length} files found.` +
-        (missing.length ? ' Placeholders (file missing OR not a real PNG, e.g. a renamed .heic/.jpg) for: ' + missing.join(', ') : ''));
+        (missing.length ? ' Placeholders (file missing OR unreadable, e.g. a renamed .heic) for: ' + missing.join(', ') : ''));
     }, 1500);
   }
 
@@ -377,9 +393,13 @@ window.Game = Game;
       return wrap;
     },
 
-    /** Game.ui.checkbox('Remember me', false, (checked) => ...) -> <label>; .checked / .setChecked(v) */
-    checkbox(label, checked, onChange) {
-      const row = make('label', 'ui-checkbox clickable');
+    /**
+     * Game.ui.checkbox('Remember me', false, (checked) => ..., { readOnly }) -> <label>
+     * .checked / .setChecked(v). Art: checkbox.png / checkbox-checked.png.
+     */
+    checkbox(label, checked, onChange, opts) {
+      opts = opts || {};
+      const row = make('label', 'ui-checkbox' + (opts.readOnly ? ' read-only' : ' clickable'));
       const box = make('span', 'ui-checkbox-box');
       row.append(box, make('span', 'ui-checkbox-label', label));
       row.setChecked = (v) => {
@@ -388,6 +408,7 @@ window.Game = Game;
       };
       row.addEventListener('click', (e) => {
         e.preventDefault();
+        if (opts.readOnly) return;
         row.setChecked(!row.checked);
         if (onChange) onChange(row.checked, row);
       });
@@ -395,7 +416,7 @@ window.Game = Game;
       return row;
     },
 
-    /** Game.ui.progress(0.3) -> bar; bar.set(0..1), bar.value */
+    /** Game.ui.progress(0.3) -> bar; bar.set(0..1), bar.value. Art: progress-bar.png / progress-fill.png */
     progress(value) {
       const bar = make('div', 'ui-progress');
       const fill = make('div', 'ui-progress-fill');
@@ -414,6 +435,35 @@ window.Game = Game;
     key(label, onClick) {
       return Game.ui.button(label, onClick, { skin: 'key.png', pressed: 'key-pressed.png', className: 'ui-key' });
     },
+  };
+
+  /**
+   * Game.runProgress(bar, ms, steps, labelEl) -> Promise
+   * Fills a Game.ui.progress() bar from 0 to 100% over `ms`. Optional `steps`
+   * (array of strings) are shown one after another in `labelEl`.
+   * Cancelled automatically if the stage ends first (the promise then never resolves).
+   */
+  Game.runProgress = function (bar, ms, steps, labelEl) {
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      let last = -1;
+      let raf = 0;
+      const tick = (now) => {
+        const v = clamp((now - t0) / ms, 0, 1);
+        bar.set(v);
+        if (steps && steps.length && labelEl) {
+          const i = Math.min(steps.length - 1, Math.floor(v * steps.length));
+          if (i !== last) {
+            last = i;
+            labelEl.textContent = steps[i];
+          }
+        }
+        if (v < 1) raf = requestAnimationFrame(tick);
+        else resolve();
+      };
+      raf = requestAnimationFrame(tick);
+      autoTrack(() => cancelAnimationFrame(raf));
+    });
   };
 
   /**
@@ -516,11 +566,11 @@ window.Game = Game;
   /**
    * Game.popup({ title, text, html, icon, buttons, modal, closable, onClose, skin })
    *   icon:    'error' | 'warning' | 'info' (= icon-<name>.png) or any asset filename
-   *   skin:    frame art, default 'popup-frame.png'
    *   buttons: [{ label: 'OK', onClick(popup) { return false to keep it open } }]
    *            default: one OK button. Pass [] for no buttons.
    *   modal:   true (default) blocks clicks on everything behind it
-   * Returns { el, close() }.
+   *   skin:    frame art, default 'popup-frame.png'
+   * Returns { el, close() }. Popups can be dragged by their title bar.
    */
   Game.popup = function (opts) {
     opts = opts || {};
@@ -542,7 +592,7 @@ window.Game = Game;
     const closable = opts.closable != null ? opts.closable : buttons.length > 0;
     const bar = makeTitlebar(opts.title || 'Outlook Saga', { closable, onClose: api.close });
     win.appendChild(bar);
-    makeWindowDraggable(win, bar); // popups can be dragged by their title bar too
+    makeWindowDraggable(win, bar);
 
     const body = make('div', 'popup-body');
     if (opts.icon) {
@@ -581,18 +631,15 @@ window.Game = Game;
   };
 
   /**
-   * Game.makeMovable(win, handle) — drag `win` around by `handle` (its title bar).
-   * Every window, popup and the mail window already uses this; call it yourself
-   * only for a custom window you build without Game.openWindow.
-   * Works for absolutely positioned windows and for centered ones (popups):
-   * those switch to absolute positioning on the first drag.
+   * Drag `win` around by `handle` (its title bar). Works for absolutely
+   * positioned windows and for centered ones (popups): those switch to
+   * absolute positioning on the first drag.
    */
   function makeWindowDraggable(win, handle) {
     handle.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || e.target.closest('button')) return;
       e.preventDefault();
       if (getComputedStyle(win).position !== 'absolute') {
-        // Centered by layout (e.g. a popup): pin it where it is, then move freely.
         const r = Game.rectOf(win);
         const parent = Game.rectOf(win.offsetParent || win.parentElement);
         win.style.position = 'absolute';
@@ -617,6 +664,8 @@ window.Game = Game;
       window.addEventListener('pointerup', up);
     });
   }
+
+  /** Game.makeMovable(win, handle) — for a custom window built without Game.openWindow. */
   Game.makeMovable = function (win, handle) {
     win = resolveEl(win);
     makeWindowDraggable(win, handle ? resolveEl(handle) : win.querySelector('.xp-titlebar') || win);
@@ -626,8 +675,8 @@ window.Game = Game;
   /**
    * Game.openWindow({ title, html, x, y, w, h, closable, icon, skin, className, onClose, persist })
    *   html:  string of HTML or a DOM node, placed in the window body
-   *   skin:  frame art, default 'window-frame.png' (e.g. a custom 'winrawr-frame.png')
    *   x, y:  top-left in game pixels (default: centered); w, h: outer size
+   *   skin:  frame art, default 'window-frame.png'
    *   onClose(win): runs whenever the window closes (also at stage end!)
    *   persist: true = don't auto-close when the stage ends
    * Returns { el, body, close(), setTitle(text) }.
@@ -682,13 +731,14 @@ window.Game = Game;
    * Game.openApp({ id, title, html, icon, x, y, w, h, skin, onClose, persist })
    * Like Game.openWindow, but for desktop "apps": non-modal, draggable,
    * closable, and only ONE window per id — opening it again just brings the
-   * existing window to the front. Use it for the converter, webcam, etc.
-   * Returns the same { el, body, close(), setTitle() } as openWindow.
+   * existing window to the front. Returns the same api as openWindow, plus
+   * `created: true` the first time.
    */
   Game.openApp = function (opts) {
     const existing = openApps[opts.id];
     if (existing && existing.el.isConnected) {
       Game.bringToFront(existing.el);
+      existing.created = false;
       return existing;
     }
     const userOnClose = opts.onClose;
@@ -700,30 +750,31 @@ window.Game = Game;
       },
     }));
     win.el.dataset.app = opts.id;
+    win.created = true;
     openApps[opts.id] = win;
     return win;
   };
 
   // ---- desktop icons ----
   /**
-   * Game.addIcon({ id, label, asset, x, y, onClick, persist })
-   * Puts an icon on the desktop. Single click triggers onClick (friendlier than
-   * double-click for a jam game). Returns the icon element (id "icon-<id>").
+   * Game.addIcon({ id, label, asset, x, y, onClick, onDoubleClick, persist })
+   * Puts an icon on the desktop. Returns the icon element (id "icon-<id>").
+   * Change its label later with icon.setLabel('text').
    */
   Game.addIcon = function (opts) {
     const icon = make('div', 'desktop-icon');
     if (opts.id) icon.id = 'icon-' + opts.id;
     icon.style.left = (opts.x || 0) + 'px';
     icon.style.top = (opts.y || 0) + 'px';
-    icon.append(
-      Game.asset(opts.asset, { w: 48, h: 48, className: 'desktop-icon-img' }),
-      make('div', 'desktop-icon-label', opts.label || '')
-    );
+    const label = make('div', 'desktop-icon-label', opts.label || '');
+    icon.append(Game.asset(opts.asset, { w: 48, h: 48, className: 'desktop-icon-img' }), label);
+    icon.setLabel = (text) => { label.textContent = text; };
     icon.addEventListener('click', (e) => {
       document.querySelectorAll('.desktop-icon.selected').forEach((n) => n.classList.remove('selected'));
       icon.classList.add('selected');
       if (opts.onClick) opts.onClick(e, icon);
     });
+    if (opts.onDoubleClick) icon.addEventListener('dblclick', (e) => opts.onDoubleClick(e, icon));
     Game.layers.icons.appendChild(icon);
     autoTrack(() => icon.remove(), opts.persist);
     return icon;
@@ -733,6 +784,21 @@ window.Game = Game;
   Game.removeIcon = function (id) {
     const icon = document.getElementById('icon-' + id);
     if (icon) icon.remove();
+  };
+
+  /**
+   * Game.addProp({ id, asset, x, y, w, h, layer, persist }) — a loose picture on
+   * the desktop (charger plug, cable, socket...). layer: 'icons' (default, under
+   * windows) or any key of Game.layers. Removed when the stage ends.
+   */
+  Game.addProp = function (opts) {
+    const el = Game.asset(opts.asset, { w: opts.w, h: opts.h, className: 'prop' });
+    if (opts.id) el.id = 'prop-' + opts.id;
+    el.style.left = (opts.x || 0) + 'px';
+    el.style.top = (opts.y || 0) + 'px';
+    Game.layers[opts.layer || 'icons'].appendChild(el);
+    autoTrack(() => el.remove(), opts.persist);
+    return el;
   };
 
   // ---- system tray (bottom right of the taskbar) ----
@@ -785,12 +851,10 @@ window.Game = Game;
   // ---- drag & drop ----
   /**
    * Game.makeDraggable(el, { onDrop, onMove, onStart, revert, handle })
-   *   onDrop(el, point) — called on release. point = game coords of the mouse.
-   *                       Use Game.overlaps(el, target) to test drop targets.
-   *   revert: true      — snap back after the drop UNLESS onDrop returns true.
-   * Moves the element with the CSS `translate` property, so it works inside
-   * any layout. A click right after a drag is swallowed.
-   * Returns { destroy(), reset() }.
+   * Moves the element itself (CSS translate). onDrop(el, point) -> return true
+   * to accept; with revert: true it snaps back unless accepted.
+   * NOTE: the element stays in its own layer, so it can slide UNDER windows.
+   * For dragging things across windows, use Game.dragGhost instead.
    */
   Game.makeDraggable = function (target, opts) {
     target = resolveEl(target);
@@ -860,6 +924,84 @@ window.Game = Game;
     };
   };
 
+  /**
+   * Game.dragGhost(el, { onDrop(point, el), onStart(el), canDrag(), persist })
+   * Drag a COPY ("ghost") of `el` on the top layer, so it's visible above every
+   * window. The original stays where it is (dimmed while dragging). On release
+   * the ghost disappears and onDrop gets the mouse position in game coords:
+   * use Game.hitTest(target, point) to see where it was dropped, then move or
+   * remove the original yourself. A click right after a drag is swallowed.
+   * Returns { destroy() }; auto-removed at stage end unless persist: true.
+   */
+  Game.dragGhost = function (target, opts) {
+    target = resolveEl(target);
+    opts = opts || {};
+    let start = null;
+    let base = null;
+    let ghost = null;
+    let justDragged = false;
+
+    function onDown(e) {
+      if (e.button !== 0 || (opts.canDrag && !opts.canDrag())) return;
+      e.preventDefault();
+      start = Game.toGame(e);
+      base = Game.rectOf(target);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    }
+    function onMove(e) {
+      const p = Game.toGame(e);
+      const dx = p.x - start.x;
+      const dy = p.y - start.y;
+      if (!ghost) {
+        if (Math.hypot(dx, dy) < 4) return;
+        ghost = target.cloneNode(true);
+        ghost.removeAttribute('id');
+        ghost.classList.add('drag-ghost');
+        Object.assign(ghost.style, {
+          position: 'absolute', margin: '0', translate: '',
+          left: base.x + 'px', top: base.y + 'px', width: base.w + 'px', height: base.h + 'px',
+        });
+        Game.layers.fx.appendChild(ghost);
+        target.classList.add('drag-source');
+        if (opts.onStart) opts.onStart(target);
+      }
+      ghost.style.translate = `${dx}px ${dy}px`;
+    }
+    function onUp(e) {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      if (!ghost) return;
+      ghost.remove();
+      ghost = null;
+      target.classList.remove('drag-source');
+      justDragged = true;
+      setTimeout(() => { justDragged = false; }, 0);
+      if (opts.onDrop) opts.onDrop(Game.toGame(e), target);
+    }
+    function swallowClick(e) {
+      if (justDragged) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }
+    target.addEventListener('pointerdown', onDown);
+    target.addEventListener('click', swallowClick, true);
+    target.classList.add('draggable');
+    const api = {
+      destroy() {
+        target.removeEventListener('pointerdown', onDown);
+        target.removeEventListener('click', swallowClick, true);
+        target.classList.remove('draggable', 'drag-source');
+        if (ghost) ghost.remove();
+      },
+    };
+    autoTrack(api.destroy, opts.persist);
+    return api;
+  };
+
   /** True if two elements' boxes overlap by more than `minPx` game pixels. */
   Game.overlaps = function (a, b, minPx) {
     const ra = resolveEl(a).getBoundingClientRect();
@@ -890,7 +1032,7 @@ window.Game = Game;
     let timer = null;
     const place = () => {
       frames.forEach(({ el, frame }) => {
-        const visible = el.isConnected && el.offsetParent !== null;
+        const visible = el.isConnected && el.getClientRects().length > 0;
         frame.style.display = visible ? '' : 'none';
         if (!visible) return;
         const r = Game.rectOf(el);
@@ -920,10 +1062,29 @@ window.Game = Game;
     screen.classList.add('shake');
   };
 
+  /**
+   * Game.blackout('Laptop died.', 2000) -> Promise
+   * Hides the whole screen (you see the black page behind the game) with a line
+   * of text in the middle, for `ms` milliseconds. Nothing is drawn: the black
+   * comes from the page background.
+   */
+  Game.blackout = function (text, ms) {
+    return new Promise((resolve) => {
+      screen.classList.add('blackout');
+      const msg = make('div', 'blackout-text', text || '');
+      Game.layers.overlay.appendChild(msg);
+      setTimeout(() => {
+        msg.remove();
+        screen.classList.remove('blackout');
+        resolve();
+      }, ms || 2000);
+    });
+  };
+
   /* ===========================================================================
    *  7. CLIPPY
    *  Moods load assets/clippy-<mood>.png. Clicking Clippy shows the stage hint
-   *  but costs CONFIG.HINT_COST_MINUTES.
+   *  but costs CONFIG.HINT_COST_MINUTES. His bubble is speech-bubble.png.
    * ======================================================================== */
   const MOODS = ['happy', 'annoyed', 'angry', 'panic'];
 
@@ -935,7 +1096,7 @@ window.Game = Game;
     "I'm not mad. I'm just disappointed.",
     'Pressing Send harder does not help. I checked.',
     'Bounce. Bounce. Bounce. Is this fun for you?',
-    'The server and I are both very tired.',
+    'The printer and I are both very tired.',
     'Have you tried actually reading the error?',
   ];
 
@@ -968,7 +1129,7 @@ window.Game = Game;
     if (!Game.started || Game.over) return;
     const stage = Game.stage;
     if (!stage || !stage.hint) {
-      Game.clippy.say('Just write your boss an email and press Send. I believe in you!');
+      Game.clippy.say('Just write the printer an email and press Send. I believe in you!');
       return;
     }
     const cost = CONFIG.HINT_COST_MINUTES;
@@ -977,16 +1138,20 @@ window.Game = Game;
   }
 
   /* ===========================================================================
-   *  8. MAIL + ATTACHMENTS
+   *  8. MAIL
    * ======================================================================== */
   let charLimit = null;
 
   Game.mail = {
-    /** Raw elements: window, from, to, subject, body, bodyWrap, counter, send, attachBar, attachList */
+    /** Raw elements: window, from, to, subject, body, bodyWrap, counter, send, attachBar, attachList, status */
     el: {},
 
     get from() { return this.el.from.value; },
-    set from(v) { this.el.from.value = v; },
+    set from(v) {
+      this.el.from.value = v;
+      const name = $('#sidebar-user-name');
+      if (name) name.textContent = v;
+    },
     get to() { return this.el.to.value; },
     set to(v) { this.el.to.value = v; },
     get subject() { return this.el.subject.value; },
@@ -996,6 +1161,9 @@ window.Game = Game;
       this.el.body.value = v;
       Game.mail.updateCounter();
     },
+    /** Status bar text (bottom of the mail window). Default: CONFIG.STATUS_TEXT */
+    get status() { return this.el.status.textContent; },
+    set status(v) { this.el.status.textContent = v; },
 
     /** null = no limit. A number shows "123 / 500" and turns red when over. */
     get charLimit() { return charLimit; },
@@ -1014,7 +1182,9 @@ window.Game = Game;
     },
   };
 
-  const attached = []; // [{ name, size, icon, el }]
+  // ---- attachments ----
+  const attached = [];   // [{ name, size, icon, el }]
+  let attachDrop = null; // drop handler set by Game.dragAttachments (stage-scoped)
 
   function renderAttachBar() {
     Game.mail.el.attachBar.classList.toggle('empty', attached.length === 0);
@@ -1022,20 +1192,29 @@ window.Game = Game;
 
   Game.attachments = {
     /**
-     * Game.attachments.add('cat.jpg', '4 GB', 'file-photo.png') -> chip element
-     * Adding a name that already exists replaces it.
+     * Game.attachments.add('cat.jpg', '4.2 GB', 'file-photo.png') -> chip element
+     * Adding a name that already exists replaces it. Chip art: attach-chip.png.
      */
     add(name, sizeLabel, iconAsset) {
       Game.attachments.remove(name);
       const icon = iconAsset || 'file-doc.png';
       const chip = make('div', 'attachment');
-      Game.setSkin(chip, 'attachment-chip.png');
+      Game.setSkin(chip, 'attach-chip.png');
       chip.dataset.name = name;
       chip.append(
         Game.asset(icon, { w: 20, h: 20, className: 'attachment-icon' }),
         make('span', 'attachment-name', name),
         make('span', 'attachment-size', sizeLabel ? `(${sizeLabel})` : '')
       );
+      // Chips can be dragged out of the email while a stage has called Game.dragAttachments().
+      Game.dragGhost(chip, {
+        persist: true,
+        canDrag: () => !!attachDrop,
+        onDrop: (point) => {
+          const entry = Game.attachments.get(chip.dataset.name);
+          if (entry && attachDrop) attachDrop(entry, point);
+        },
+      });
       Game.mail.el.attachList.appendChild(chip);
       attached.push({ name, size: sizeLabel || '', icon, el: chip });
       renderAttachBar();
@@ -1058,22 +1237,131 @@ window.Game = Game;
       a.size = sizeLabel;
       a.el.querySelector('.attachment-size').textContent = `(${sizeLabel})`;
     },
+    /** Rename in place: rename('cat.jpg', 'cat.png', { size, icon }) */
+    rename(oldName, newName, opts) {
+      const a = Game.attachments.get(oldName);
+      if (!a) return null;
+      a.name = newName;
+      a.el.dataset.name = newName;
+      a.el.querySelector('.attachment-name').textContent = newName;
+      if (opts && opts.size) Game.attachments.setSize(newName, opts.size);
+      if (opts && opts.icon) {
+        a.icon = opts.icon;
+        Game.setAsset(a.el.querySelector('.attachment-icon'), opts.icon);
+      }
+      return a;
+    },
     clear() {
       attached.slice().forEach((a) => Game.attachments.remove(a.name));
     },
   };
 
+  /**
+   * Game.dragAttachments((attachment, point) => { ... })
+   * For the rest of the current stage, attachment chips can be dragged out of
+   * the email (as a ghost on the top layer). On release your function gets the
+   * attachment entry and the drop point; use Game.hitTest(target, point).
+   * If you don't remove the attachment, the chip simply stays in the email.
+   */
+  Game.dragAttachments = function (onDrop) {
+    attachDrop = onDrop;
+    Game.track(() => { if (attachDrop === onDrop) attachDrop = null; });
+  };
+
+  /**
+   * Game.wordView(tokens, onClick) -> view
+   * Temporarily replaces the email body with a read-only view made of clickable
+   * words. tokens: [{ text, tag }] — tokens WITH a tag are clickable spans with
+   * class "word word-<tag>"; tokens without a tag are plain text (keep the
+   * spaces/newlines as their own tokens). onClick(index, token, view) may
+   * change view.tokens; the view re-renders after each click.
+   *   view.text()        current text
+   *   view.count(tag)    how many tokens have this tag
+   *   view.close()       write the text back into the body and show the textarea
+   * Closed automatically when the stage ends (so the body keeps the result).
+   * Game.wordView.split(text) turns plain text into untagged tokens.
+   */
+  Game.wordView = function (tokens, onClick) {
+    const m = Game.mail.el;
+    const el = make('div', 'word-view');
+    let closed = false;
+    const view = {
+      el,
+      tokens,
+      render() {
+        el.replaceChildren();
+        view.tokens.forEach((t, i) => {
+          if (!t.tag) {
+            el.appendChild(document.createTextNode(t.text));
+            return;
+          }
+          const span = make('span', `word word-${t.tag} clickable`, t.text);
+          span.dataset.i = i;
+          el.appendChild(span);
+        });
+        Game.mail.el.counter.textContent = `${view.text().length} characters`;
+      },
+      text() { return view.tokens.map((t) => t.text).join(''); },
+      count(tag) { return view.tokens.filter((t) => t.tag === tag).length; },
+      close() {
+        if (closed) return;
+        closed = true;
+        Game.mail.body = view.text();
+        el.remove();
+        m.body.classList.remove('hidden');
+      },
+    };
+    el.addEventListener('click', (e) => {
+      const span = e.target.closest('.word');
+      if (!span || !onClick) return;
+      const i = Number(span.dataset.i);
+      onClick(i, view.tokens[i], view);
+      view.render();
+    });
+    m.body.classList.add('hidden');
+    m.bodyWrap.appendChild(el);
+    view.render();
+    Game.track(view.close);
+    return view;
+  };
+  Game.wordView.split = (text) => String(text).split(/(\s+)/).filter((s) => s !== '').map((s) => ({ text: s }));
+
+  // ---- Bounced folder counter + "Sending..." bar ----
+  function renderBounces() {
+    const el = $('#bounce-count');
+    if (el) el.textContent = Game.bounces;
+  }
+
+  let sendBar = null;
+  function showSending(ms) {
+    const box = $('#send-progress');
+    box.classList.remove('hidden');
+    sendBar.set(0);
+    const t0 = performance.now();
+    const tick = (now) => {
+      const v = clamp((now - t0) / ms, 0, 1);
+      sendBar.set(v);
+      if (v < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  function hideSending() {
+    $('#send-progress').classList.add('hidden');
+  }
+
   /* ===========================================================================
    *  9. CLOCK
-   *  Starts at CONFIG.START_TIME; at CONFIG.DEADLINE you're fired.
+   *  Starts at CONFIG.START_TIME; at CONFIG.DEADLINE you're fired
+   *  (unless ?nodeadline=1 is in the URL).
    * ======================================================================== */
   let minutes = CONFIG.START_TIME;
   let tickTimer = null;
   let frozen = false;
+  let noDeadline = false;
 
   function renderClock() {
     clockEl.textContent = Game.clock.format(minutes);
-    clockEl.classList.toggle('late', CONFIG.DEADLINE - minutes <= CONFIG.WARNING_MINUTES_LEFT);
+    clockEl.classList.toggle('late', !noDeadline && CONFIG.DEADLINE - minutes <= CONFIG.WARNING_MINUTES_LEFT);
   }
 
   Game.clock = {
@@ -1092,15 +1380,20 @@ window.Game = Game;
       frozen = true;
       Game.clock.stop();
     },
+    /** Debug: the clock keeps running but 9:00 never fires you (?nodeadline=1). */
+    disableDeadline() {
+      noDeadline = true;
+      renderClock();
+    },
     /** Add (or with a negative number, give back) minutes. */
     add(n) {
       if (Game.over || frozen) return;
       minutes += n;
       renderClock();
-      if (minutes >= CONFIG.DEADLINE) youreFired();
+      if (!noDeadline && minutes >= CONFIG.DEADLINE) youreFired();
     },
     format(m) {
-      const h = Math.floor(m / 60);
+      const h = Math.floor(m / 60) % 24;
       const mm = String(m % 60).padStart(2, '0');
       return `${((h + 11) % 12) + 1}:${mm} ${h < 12 ? 'AM' : 'PM'}`;
     },
@@ -1111,11 +1404,11 @@ window.Game = Game;
     Game.clock.stop();
     Game.sound('error.wav');
     Game.shake();
-    Game.clippy.say("It's 9:00. I've started drafting your resignation letter. No subject, obviously.", 'angry');
+    Game.clippy.say("It's 9:00. The printer has printed your resignation letter. Single-sided. Out of spite.", 'angry');
     Game.popup({
-      title: 'New message from Boss',
+      title: 'New message from printer@company.com',
       icon: 'warning',
-      text: "It's 9:00 and you're not here.\n\nYou're fired.",
+      text: "It's 9:00 and you're not at your desk.\n\nYou're fired.\n\n(PC LOAD LETTER)",
       closable: false,
       buttons: [{ label: 'Try again', onClick: () => Game.restart() }],
     });
@@ -1195,15 +1488,20 @@ window.Game = Game;
             { transform: away },
           ];
 
+      showSending(duration * (bounceBack ? 0.45 : 1));
       const anim = env.animate(frames, { duration, fill: 'forwards' });
       if (bounceBack) {
         setTimeout(() => {
           Game.sound('bounce.wav');
           Game.shake();
+          Game.bounces++;
+          renderBounces();
+          Game.mail.status = 'Bounced. Obviously.';
         }, duration * 0.72);
       }
       anim.onfinish = () => {
         env.remove();
+        hideSending();
         resolve();
       };
     });
@@ -1211,10 +1509,12 @@ window.Game = Game;
 
   /** The Send button. Also available as Game.send() for stages. */
   async function send() {
-    if (!Game.started || Game.over || sending) return;
+    if (!Game.started || Game.over || sending || screen.classList.contains('blackout')) return;
     sending = true;
     root.classList.add('busy');
     Game.sound('send.wav');
+    const statusBefore = Game.mail.status === 'Bounced. Obviously.' ? CONFIG.STATUS_TEXT : Game.mail.status;
+    Game.mail.status = 'Sending...';
 
     // Decide the outcome BEFORE animating, so we know if the envelope bounces.
     const outcome = Game.stage ? runCheck(Game.stage) : { pass: true }; // no stage yet -> start stage 1
@@ -1227,6 +1527,7 @@ window.Game = Game;
 
     sending = false;
     root.classList.remove('busy');
+    if (Game.mail.status === 'Sending...' || Game.mail.status === 'Bounced. Obviously.') Game.mail.status = statusBefore;
     if (Game.over) return; // fired while the envelope was in the air
 
     if (!outcome.pass) {
@@ -1296,6 +1597,19 @@ window.Game = Game;
     console.info(`[Game] ✔ Stage ${stage.id} passed`);
   }
 
+  /**
+   * Game.restartStage() — undo the current stage (cleanup + tracked cleanups)
+   * and run its setup() again, without the error popup. For "try again"
+   * moments like the battery dying in stage 13.
+   */
+  Game.restartStage = function () {
+    const stage = Game.stage;
+    if (!stage || Game.over) return;
+    if (!stage.todo) safeCall(stage, 'cleanup');
+    runCleanups();
+    if (!stage.todo && !safeCall(stage, 'setup')) stage._broken = true;
+  };
+
   /** Only used if there is no `final: true` stage (e.g. its file is missing). */
   function deliveredFallback() {
     Game.over = true;
@@ -1321,16 +1635,17 @@ window.Game = Game;
    *    Game.debug.skip()        pass the current stage instantly
    *    Game.debug.goto(7)       jump to stage 7
    *    Game.debug.missing()     art files that failed to load so far (missing, misnamed,
- *                             or not a real PNG — e.g. a .heic renamed to .png)
-   *  URL options:  index.html?stage=7   start directly at stage 7 (skips title)
-   *                index.html?freeze    clock never moves
+   *                             or unreadable — e.g. a .heic renamed to .png)
+   *  URL options:  index.html?stage=7         start directly at stage 7 (skips title)
+   *                index.html?nodeadline=1    9:00 never fires you
+   *                index.html?freeze          the clock never moves
    * ======================================================================== */
   Game.debug = {
     list() {
       console.table(Game.stages.map((s) => ({ id: s.id, name: s.name, todo: s.todo, final: s.final })));
     },
     skip() {
-      if (!Game.started) startGame();
+      if (!Game.started) startGame(true);
       const i = Game.stageIndex;
       finishStage();
       startStage(i + 1);
@@ -1341,7 +1656,7 @@ window.Game = Game;
         console.warn(`[Game] No stage with id ${id}. Loaded:`, Game.stages.map((s) => s.id).join(', '));
         return;
       }
-      if (!Game.started) startGame();
+      if (!Game.started) startGame(true);
       finishStage();
       startStage(i);
     },
@@ -1353,13 +1668,30 @@ window.Game = Game;
   /* ===========================================================================
    *  12. BOOT
    * ======================================================================== */
-  function startGame() {
+  function startGame(quiet) {
     if (Game.started) return;
     Game.started = true;
     $('#title-screen').classList.add('hidden');
     Game.clock.start();
-    Game.clippy.say("Hi! It looks like you're late for work. Write your boss a quick email and press Send!", 'happy');
+    if (!quiet) Game.clippy.say("Hi! It looks like you're late for work. Write the printer a quick email and press Send!", 'happy');
   }
+
+  // Sarcastic reactions for the decorative parts of the mail client
+  const TOOLBAR_LINES = {
+    new: "A NEW email? You can't even send this one.",
+    reply: 'Reply to what? Nobody has ever written to you.',
+    attach: "More attachments? Bold. Let's see how that goes.",
+    delete: 'Delete it? Then what would you bounce?',
+    settings: 'Settings are locked. For your safety. And mine.',
+  };
+  const FOLDER_LINES = {
+    inbox: "Inbox: 0 messages. The printer doesn't write back.",
+    outbox: 'Outbox: 1 message, stuck. You know which one.',
+    sent: 'Sent: empty. Like your track record.',
+    drafts: "Drafts: 47 versions of 'sorry I'm late'.",
+    bounced: () => `Bounced: ${Game.bounces}. And counting.`,
+    trash: 'Trash: your previous excuses.',
+  };
 
   function init() {
     root = $('#game');
@@ -1391,43 +1723,46 @@ window.Game = Game;
     m.send = $('#send-btn');
     m.attachBar = $('#mail-attachments');
     m.attachList = $('#attach-list');
+    m.status = $('#status-text');
 
-    m.from.value = CONFIG.PLAYER_ADDRESS;
+    Game.mail.from = CONFIG.PLAYER_ADDRESS;
     m.to.value = CONFIG.BOSS_ADDRESS;
     m.subject.value = ''; // the email starts with an EMPTY subject (stage 1)
     m.body.value = CONFIG.DEFAULT_BODY;
+    m.status.textContent = CONFIG.STATUS_TEXT;
     m.body.addEventListener('input', Game.mail.updateCounter);
     m.send.addEventListener('click', send);
     Game.mail.updateCounter();
     renderAttachBar();
+    renderBounces();
+    sendBar = Game.ui.progress(0);
+    $('#send-progress').appendChild(sendBar);
 
     makeWindowDraggable(m.window, $('.xp-titlebar', m.window));
     m.window.addEventListener('pointerdown', () => Game.bringToFront(m.window));
     Game.bringToFront(m.window);
-    $('.xp-tb-close', m.window).addEventListener('click', () =>
-      Game.clippy.say("Nice try. The email isn't going to send itself.", 'annoyed')
+    const talk = (text, mood) => { if (Game.started && !Game.over) Game.clippy.say(text, mood || 'annoyed'); };
+    $('.xp-tb-close', m.window).addEventListener('click', () => talk("Nice try. The email isn't going to send itself."));
+    $('.xp-tb-min', m.window).addEventListener('click', () => talk('Minimizing your problems? Classic.'));
+    $('.xp-tb-max', m.window).addEventListener('click', () => talk('It is already as big as your excuse.'));
+    document.querySelectorAll('[data-tb]').forEach((btn) =>
+      btn.addEventListener('click', () => talk(TOOLBAR_LINES[btn.dataset.tb]))
     );
-    $('.xp-tb-min', m.window).addEventListener('click', () =>
-      Game.clippy.say('Minimizing your problems? Classic.', 'annoyed')
+    document.querySelectorAll('[data-folder]').forEach((row) =>
+      row.addEventListener('click', () => {
+        const line = FOLDER_LINES[row.dataset.folder];
+        talk(typeof line === 'function' ? line() : line, 'happy');
+      })
     );
-    $('.xp-tb-max', m.window).addEventListener('click', () =>
-      Game.clippy.say('It is already as big as your excuse.', 'annoyed')
-    );
-    // Decorative bits in the mail window (art: ad-banner.png, user-avatar.png)
-    $('#ad-banner').addEventListener('click', () => {
-      if (Game.started && !Game.over) Game.clippy.say('Join later. You are LATE, remember?', 'annoyed');
-    });
-    $('#user-avatar').addEventListener('click', () => {
-      if (Game.started && !Game.over) Game.clippy.say("That's you. You look like someone who's late.", 'happy');
-    });
+    $('#ad-banner').addEventListener('click', () => talk('Join later. You are LATE, remember?'));
+    $('#user-avatar').addEventListener('click', () => talk("That's you. You look like someone who's late.", 'happy'));
+    $('#saga-logo').addEventListener('click', () => talk('Outlook Saga: bouncing emails since 2003.', 'happy'));
 
     // ---- taskbar ----
     clockEl = $('#clock');
     trayIcons = $('#tray-icons');
     renderClock();
-    $('#start-button').addEventListener('click', () => {
-      if (Game.started && !Game.over) Game.clippy.say('There is no Start menu. There is only the email.', 'annoyed');
-    });
+    $('#start-button').addEventListener('click', () => talk('There is no Start menu. There is only the email.'));
     $('#task-mail').addEventListener('click', () => Game.bringToFront(m.window));
     // Built-in tray icons (added right-to-left). Stages change them with
     // Game.tray.setIcon / setText — and put them back in cleanup.
@@ -1437,7 +1772,7 @@ window.Game = Game;
 
     // ---- default desktop icons (persist for the whole game) ----
     Game.addIcon({
-      id: 'outlook', label: 'Outlook Saga', asset: 'icon-outlook-saga.png', x: 16, y: 16, persist: true,
+      id: 'outlook', label: 'Outlook Saga', asset: 'app-icon.png', x: 16, y: 16, persist: true,
       onClick: () => Game.bringToFront(m.window),
     });
     // Joke "apps": real (non-modal, draggable) app windows, one per app.
@@ -1449,17 +1784,17 @@ window.Game = Game;
     Game.addIcon({
       id: 'my-computer', label: 'My Computer', asset: 'icon-my-computer.png', x: 16, y: 106, persist: true,
       onClick: desktopApp('my-computer', 'My Computer', 'icon-my-computer.png',
-        'Local Disk (C:) is 99% full.\n\nMostly excuses.', 120, 90),
+        'Local Disk (C:) is 99% full.\n\nMostly excuses.', 150, 90),
     });
     Game.addIcon({
       id: 'homework', label: 'Homework', asset: 'icon-homework.png', x: 16, y: 196, persist: true,
       onClick: desktopApp('homework', 'Homework', 'icon-homework.png',
-        'This folder is 40 GB.\n\nClippy is not asking any questions.', 150, 180),
+        'This folder is 40 GB.\n\nClippy is not asking any questions.', 180, 180),
     });
     Game.addIcon({
       id: 'folder', label: 'New Folder (37)', asset: 'icon-folder.png', x: 16, y: 286, persist: true,
       onClick: desktopApp('folder', 'New Folder (37)', 'icon-folder.png',
-        'This folder is empty.\n\nLike your excuse.', 180, 270),
+        'This folder is empty.\n\nLike your excuse.', 210, 270),
     });
 
     // ---- Clippy ----
@@ -1471,15 +1806,16 @@ window.Game = Game;
     bubble.addEventListener('click', () => Game.clippy.hide());
 
     // ---- title screen + URL debug options ----
-    $('#start-game').addEventListener('click', startGame);
+    $('#start-game').addEventListener('click', () => startGame());
     const params = new URLSearchParams(location.search);
     if (params.has('freeze')) Game.clock.freeze();
+    if (params.has('nodeadline') && params.get('nodeadline') !== '0') Game.clock.disableDeadline();
     if (params.has('stage')) Game.debug.goto(parseFloat(params.get('stage')));
 
     console.info(
       `[Game] Ready. ${Game.stages.length} stages loaded: ` +
         Game.stages.map((s) => s.id + (s.todo ? '*' : '')).join(', ') +
-        '  (* = todo stub)'
+        (Game.stages.some((s) => s.todo) ? '  (* = todo stub)' : '')
     );
   }
 

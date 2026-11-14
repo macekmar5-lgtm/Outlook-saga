@@ -12,8 +12,8 @@
     #desktop          wallpaper, desktop icons, windows (incl. the mail window), Clippy, taskbar
     #layer-highlight  pulsing highlight frames (Game.highlight)
     #layer-popups     modal dialogs (Game.popup)
-    #layer-fx         the flying envelope and other effects (never clickable)
-    #layer-overlay    full-screen takeovers (blue screen)
+    #layer-fx         the flying envelope, drag ghosts (never clickable)
+    #layer-overlay    full-screen takeovers (blue screen, blackout text)
     #title-screen     covers everything until Start is pressed
 -->
 <html lang="en">
@@ -31,15 +31,17 @@
       <div id="desktop">
         <div id="wallpaper" class="asset" data-asset="wallpaper.png"></div>
 
-        <!-- Desktop icons (Game.addIcon) -->
+        <!-- Desktop icons + props (Game.addIcon / Game.addProp) -->
         <div id="layer-icons" class="layer"></div>
 
         <!-- Windows (Game.openWindow). The mail window lives here too. -->
         <div id="layer-windows" class="layer">
+
+          <!-- ===== The Outlook Saga mail client ===== -->
           <div id="mail-window" class="xp-window" data-skin="window-frame.png">
             <div class="xp-titlebar" data-skin="titlebar.png">
-              <div class="asset xp-title-icon" data-asset="icon-outlook-saga.png"></div>
-              <span class="xp-title">New Message - Outlook Saga</span>
+              <div class="asset xp-title-icon" data-asset="app-icon.png"></div>
+              <span class="xp-title">Outlook Saga - New Message</span>
               <div class="xp-title-buttons">
                 <button class="xp-tb-btn xp-tb-min" data-skin="btn-minimize.png" title="Minimize"></button>
                 <button class="xp-tb-btn xp-tb-max" data-skin="btn-maximize.png" title="Maximize"></button>
@@ -47,50 +49,75 @@
               </div>
             </div>
 
-            <div class="mail-menubar">
-              <span>File</span><span>Edit</span><span>View</span><span>Insert</span>
-              <span>Format</span><span>Tools</span><span>Message</span><span>Help</span>
-            </div>
-
+            <!-- Toolbar: logo, (useless) buttons, ad -->
             <div class="mail-toolbar">
-              <button id="send-btn" class="ui-btn send-btn" data-skin="btn-send.png" data-skin-pressed="btn-send-pressed.png" aria-label="Send">Send</button>
-              <button class="ui-btn" data-skin="button.png" disabled>Cut</button>
-              <button class="ui-btn" data-skin="button.png" disabled>Copy</button>
-              <button class="ui-btn" data-skin="button.png" disabled>Paste</button>
-              <button class="ui-btn" data-skin="button.png" disabled>Spelling</button>
+              <div id="saga-logo" class="asset clickable" data-asset="saga-logo.png" title="Outlook Saga"></div>
+              <button class="tb-btn" data-tb="new"><span class="asset tb-icon" data-asset="tb-new.png"></span><span>New</span></button>
+              <button class="tb-btn" data-tb="reply"><span class="asset tb-icon" data-asset="tb-reply.png"></span><span>Reply</span></button>
+              <button class="tb-btn" data-tb="attach"><span class="asset tb-icon" data-asset="tb-attach.png"></span><span>Attach</span></button>
+              <button class="tb-btn" data-tb="delete"><span class="asset tb-icon" data-asset="tb-delete.png"></span><span>Delete</span></button>
+              <button class="tb-btn" data-tb="settings"><span class="asset tb-icon" data-asset="tb-settings.png"></span><span>Settings</span></button>
               <div id="ad-banner" class="asset clickable" data-asset="ad-banner.png" title="Advertisement"></div>
             </div>
 
-            <div class="mail-fields">
-              <label for="mail-from">From:</label>
-              <div class="ui-field" data-skin="input-box.png"><input id="mail-from" type="text" readonly></div>
-              <label for="mail-to">To:</label>
-              <div class="ui-field" data-skin="input-box.png"><input id="mail-to" type="text" readonly></div>
-              <label for="mail-subject">Subject:</label>
-              <div class="ui-field" data-skin="input-box.png"><input id="mail-subject" type="text" autocomplete="off" spellcheck="false"></div>
-              <div id="user-avatar" class="asset clickable" data-asset="user-avatar.png" title="You"></div>
+            <div class="mail-main">
+              <!-- Left sidebar: folders + user -->
+              <div class="mail-sidebar">
+                <div class="folder clickable" data-folder="inbox"><span class="asset folder-icon" data-asset="folder-inbox.png"></span><span>Inbox</span></div>
+                <div class="folder clickable" data-folder="outbox"><span class="asset folder-icon" data-asset="folder-outbox.png"></span><span>Outbox (1)</span></div>
+                <div class="folder clickable" data-folder="sent"><span class="asset folder-icon" data-asset="folder-sent.png"></span><span>Sent</span></div>
+                <div class="folder clickable" data-folder="drafts"><span class="asset folder-icon" data-asset="folder-drafts.png"></span><span>Drafts</span></div>
+                <div class="folder clickable" data-folder="bounced"><span class="asset folder-icon" data-asset="folder-bounced.png"></span><span>Bounced (<span id="bounce-count">0</span>)</span></div>
+                <div class="folder clickable" data-folder="trash"><span class="asset folder-icon" data-asset="folder-trash.png"></span><span>Trash</span></div>
+                <div class="sidebar-user">
+                  <div id="user-avatar" class="asset clickable" data-asset="user-avatar.png" title="You"></div>
+                  <div id="sidebar-user-name"></div>
+                </div>
+              </div>
+
+              <!-- Compose area -->
+              <div class="mail-compose">
+                <div class="mail-fields">
+                  <label for="mail-from">From:</label>
+                  <div class="ui-field" data-skin="input-box.png"><input id="mail-from" type="text" readonly></div>
+                  <label for="mail-to">To:</label>
+                  <div class="ui-field" data-skin="input-box.png"><input id="mail-to" type="text" readonly></div>
+                  <label for="mail-subject">Subject:</label>
+                  <div class="ui-field" data-skin="input-box.png"><input id="mail-subject" type="text" autocomplete="off" spellcheck="false"></div>
+                </div>
+
+                <div id="format-bar" data-skin="format-bar.png">
+                  <span class="fmt">Arial</span><span class="fmt">10 pt</span>
+                  <span class="fmt fmt-b">B</span><span class="fmt fmt-i">I</span><span class="fmt fmt-u">U</span>
+                </div>
+
+                <div id="mail-attachments" class="mail-attachments empty">
+                  <span class="attach-label">Attach:</span>
+                  <div id="attach-list"></div>
+                </div>
+
+                <!-- Stages may swap this for a clickable word view (Game.wordView). -->
+                <div id="mail-body-wrap" class="ui-field multiline" data-skin="body-paper.png">
+                  <textarea id="mail-body" spellcheck="false"></textarea>
+                </div>
+
+                <div class="compose-footer">
+                  <div id="char-counter" data-skin="char-counter-bg.png"></div>
+                  <button id="send-btn" class="ui-btn send-btn" data-skin="btn-send.png" data-skin-pressed="btn-send-pressed.png" aria-label="Send">Send</button>
+                </div>
+              </div>
             </div>
 
-            <div id="mail-attachments" class="mail-attachments empty">
-              <span class="attach-label">Attach:</span>
-              <div id="attach-list"></div>
-            </div>
-
-            <!-- Stages may overlay things on top of the body (e.g. clickable words). -->
-            <div id="mail-body-wrap" class="ui-field multiline" data-skin="input-box.png">
-              <textarea id="mail-body" spellcheck="false"></textarea>
-            </div>
-
-            <div class="mail-statusbar">
-              <span id="char-counter"></span>
-              <span>Outlook Saga 2003 (Unlicensed)</span>
+            <div class="mail-statusbar" data-skin="statusbar.png">
+              <span id="status-text"></span>
+              <div id="send-progress" class="hidden"><span>Sending...</span></div>
             </div>
           </div>
         </div>
 
         <!-- Clippy -->
         <div id="clippy" data-mood="happy">
-          <div id="clippy-bubble" class="hidden" data-skin="clippy-bubble.png">
+          <div id="clippy-bubble" class="hidden" data-skin="speech-bubble.png">
             <div id="clippy-text"></div>
           </div>
           <div id="clippy-img" class="asset" data-asset="clippy-happy.png" title="Click for a hint (costs 1 minute)"></div>
@@ -101,8 +128,8 @@
           <button id="start-button" data-skin="start-button.png" aria-label="start"></button>
           <div id="taskbar-tasks">
             <button id="task-mail" class="task-button" data-skin="taskbar-button.png">
-              <span class="asset" data-asset="icon-outlook-saga.png" style="width:16px;height:16px"></span>
-              <span>New Message</span>
+              <span class="asset" data-asset="app-icon.png" style="width:16px;height:16px"></span>
+              <span>Outlook Saga</span>
             </button>
           </div>
           <div id="tray" data-skin="tray.png">
@@ -122,7 +149,7 @@
       <div id="title-screen" data-skin="title-background.png">
         <div id="title-logo" class="asset" data-asset="title-logo.png"></div>
         <button id="start-game" class="ui-btn" data-skin="button.png" data-skin-pressed="button-pressed.png">Start</button>
-        <div class="title-tagline">Send ONE email. How hard can it be?</div>
+        <div class="title-tagline">Send ONE email to your boss, the printer. How hard can it be?</div>
       </div>
 
     </div>

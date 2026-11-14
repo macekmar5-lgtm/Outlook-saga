@@ -4,7 +4,7 @@
  *  1. Copy this file to stages/NN-short-name.js (or open the existing stub).
  *  2. Change the id and texts, write setup/check/cleanup.
  *  3. Make sure index.html has a <script src="stages/NN-short-name.js"> tag.
- *  4. Test it directly:  index.html?stage=NN       (add &freeze to stop the clock)
+ *  4. Test it directly:  index.html?stage=NN&nodeadline=1   (9:00 never fires you)
  *
  *  This file is NOT loaded by index.html. It's a working example: a "Do Not
  *  Disturb" tray toggle that the player must switch off.
@@ -117,6 +117,12 @@ Game.registerStage({
  *  Drag       G.makeDraggable(el, { onDrop(el) { return G.overlaps(el, target); }, revert: true })
  *  Tray       G.tray.add(id, label, onClick, { icon, text }) / G.tray.setIcon(id, file) / G.tray.setText(id, text)
  *             built-in: 'wifi', 'volume', 'battery' (restore them in cleanup if you change them)
+ *  Ghost drag G.dragGhost(el, { onDrop(point) { if (G.hitTest(target, point)) ... } })  (visible above windows)
+ *  Chips      G.dragAttachments((att, point) => ...)  attachment chips become draggable for this stage
+ *  Words      G.wordView(tokens, (i, token, view) => ...)  clickable words in the body (G.wordView.split(text))
+ *  Props      G.addProp({ id, asset, x, y, w, h })  loose picture on the desktop (plug, cable...)
+ *  Progress   G.runProgress(G.ui.progress(0), ms, ['step 1', 'step 2'], labelEl).then(...)
+ *  Restart    G.restartStage()  /  G.blackout('Laptop died.', 2000).then(...)
  *  Juice      G.highlight(elOrSelector, ms) / G.shake()
  *  Clippy     G.clippy.say(text, 'happy'|'annoyed'|'angry'|'panic')
  *  Time       G.clock.add(minutes) / G.clock.minutesLeft

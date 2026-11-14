@@ -1,54 +1,78 @@
 /* =============================================================================
- *  STAGE 4 — Attachment exceeds the file size limit              STATUS: TODO
+ *  STAGE 4 — Attachment exceeds the file size limit              STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    The cat photo attachment is now 4 GB. A window "Attachment Manager" shows
- *    the cat picture and a "Compress" button. Pressing Compress visibly squishes
- *    the cat (cat.png -> cat-squished.png) and the attachment becomes tiny.
- *    Pass once the cat is compressed.
+ *    cat.jpg is 4.2 GB. Click the cat.jpg chip in the email: a preview window
+ *    opens with the cat (cat.png), its size and a "Compress" button. Press it:
+ *    a progress bar runs, the cat gets visibly squished (cat-squished.png) and
+ *    the size becomes 3 MB.  Pass: cat is compressed.
  *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - Make sure the cat is attached (don't rely on stage 3):
- *          G.attachments.add('cat.jpg', '4 GB', 'file-photo.png')
- *      - G.state.catCompressed = false
- *      - const win = G.openWindow({ title: 'Attachment Manager - cat.jpg', w: 420, h: 380 })
- *        put G.asset('cat.png', { w: 300, h: 220 }) and G.ui.button('Compress', onCompress)
- *        in win.body (optional: a G.ui.progress() bar that fills while compressing)
- *      - on Compress click: G.setAsset(catBox, 'cat-squished.png'),
- *        G.attachments.setSize('cat.jpg', '12 KB'), G.state.catCompressed = true,
- *        a little squash CSS animation / G.shake(), Clippy: "He's fine. Probably."
- *    check:   G.state.catCompressed || 'cat.jpg is still 4 GB.'
- *    cleanup: delete G.state.catCompressed (window auto-closes).
- *    Leave 'cat.jpg' attached — stage 6 converts it to PNG.
- *
- *  JUICE IDEAS
- *    - A fake progress bar while compressing ("Removing unnecessary fluff...").
- *    - Pressing Compress twice: "Any more and it's a pancake."
- *
- *  ASSETS: cat.png, cat-squished.png, file-photo.png
+ *  ASSETS: cat.png, cat-squished.png, file-photo.png, progress-bar.png, progress-fill.png
  * ========================================================================== */
 
-Game.registerStage({
-  id: 4,
-  name: 'File too big',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'happy',
-  error: 'Attachments exceed the file size limit (25 MB). cat.jpg is 4 GB.',
-  clippy: "Hmm, 4 GB is a LOT of cat. Have you tried compressing it? Gently. He's very soft.",
-  hint: 'Open the Attachment Manager window and press "Compress".',
-  assets: ['cat.png', 'cat-squished.png', 'file-photo.png'],
+(function () {
+  function openPreview(G) {
+    const compressed = G.state.catCompressed;
+    const win = G.openApp({
+      id: 'cat-preview', title: 'Attachment Preview - cat.jpg', icon: 'file-photo.png',
+      x: 560, y: 120, w: 360, h: 400,
+    });
+    if (!win.created) return;
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+    const col = G.make('div', 'stage-center');
+    const img = G.asset(compressed ? 'cat-squished.png' : 'cat.png', { w: 300, h: 220 });
+    const size = G.make('div', 'mood-label', compressed ? 'cat.jpg - 3 MB' : 'cat.jpg - 4.2 GB');
+    const label = G.make('div', 'stage-note', compressed ? 'Compressed. He is fine. Probably.' : 'Limit: 25 MB');
+    const bar = G.ui.progress(0);
+    bar.classList.add('hidden');
+    const btn = G.ui.button('Compress', () => {
+      if (G.state.catCompressed) {
+        G.clippy.say("He's already flat. Any more and he's a pancake.", 'happy');
+        return;
+      }
+      btn.disabled = true;
+      bar.classList.remove('hidden');
+      G.runProgress(bar, 2200, ['Compressing...', 'Squeezing the cat...', 'Removing unnecessary fluff...', 'Done!'], label).then(() => {
+        G.setAsset(img, 'cat-squished.png');
+        size.textContent = 'cat.jpg - 3 MB';
+        G.attachments.setSize('cat.jpg', '3 MB');
+        G.state.catCompressed = true;
+        G.shake();
+        G.clippy.say('There. Slightly flatter, fully legal. 3 MB of cat.', 'happy');
+      });
+    });
+    col.append(img, size, bar, label, btn);
+    win.body.appendChild(col);
+  }
 
-  check(G) {
-    // TODO
-    return true;
-  },
+  Game.registerStage({
+    id: 4,
+    name: 'File too big',
+    vibe: 'happy',
+    error: 'Attachments exceed the file size limit (25 MB). cat.jpg is 4.2 GB.',
+    clippy: 'Oh! The printer only has 25 MB of memory. Click the cat.jpg attachment and compress him. Gently, he is very soft.',
+    hint: 'Click the cat.jpg chip in the email to open it, then press "Compress".',
+    retry: ['The cat is still 4.2 GB. That is a LOT of cat.', 'Click the cat. Press Compress. I believe in you! :)'],
+    assets: ['cat.png', 'cat-squished.png', 'file-photo.png', 'progress-bar.png', 'progress-fill.png'],
 
-  cleanup(G) {
-    // TODO
-  },
-});
+    setup(G) {
+      G.state.catCompressed = false;
+      if (!G.attachments.get('cat.jpg')) G.attachments.add('cat.jpg', '4.2 GB', 'file-photo.png');
+      G.attachments.setSize('cat.jpg', '4.2 GB');
+
+      const chip = G.attachments.get('cat.jpg').el;
+      chip.classList.add('clickable');
+      G.track(() => chip.classList.remove('clickable'));
+      G.on(chip, 'click', () => openPreview(G));
+      G.timeout(() => G.highlight(chip, 3000), 600);
+    },
+
+    check(G) {
+      return G.state.catCompressed || 'cat.jpg is still 4.2 GB. The printer only has 25 MB of memory.';
+    },
+
+    cleanup(G) {
+      delete G.state.catCompressed;
+    },
+  });
+})();

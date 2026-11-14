@@ -1,54 +1,63 @@
 /* =============================================================================
- *  STAGE 17 — No internet connection                             STATUS: TODO
+ *  STAGE 17 — No internet connection                             STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    The internet is gone: the WiFi tray icon is crossed out. A network cable
- *    lies loose on the desktop and a wall socket is on the other side. The
- *    player drags the cable plug into the socket. Pass when plugged in.
+ *    The tray wifi shows disconnected (tray-wifi-off.png) and the mail status
+ *    bar says so. A network cable lies on the desktop, partly under the mail
+ *    window; the wall socket is at the bottom left. Drag the cable onto the
+ *    socket -> the tray shows connected again.  Pass: cable plugged in.
  *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - G.state.online = false
- *      - G.tray.setIcon('wifi', 'tray-wifi-off.png')  — persistent tray item: put
- *        'tray-wifi.png' back in cleanup!
- *      - const socket = G.asset('wall-socket.png', { w: 80, h: 100 }) placed at e.g. left 1150, top 300
- *        (absolutely positioned in G.layers.icons; G.track(() => socket.remove()))
- *      - const cable = G.asset('network-cable.png', { w: 140, h: 90 }) at left 260, top 600
- *      - G.makeDraggable(cable, { revert: true, onDrop(el) {
- *            if (!G.overlaps(el, socket, 15)) return false;
- *            G.state.online = true; G.tray.setIcon('wifi', 'tray-wifi.png');
- *            return true; } })
- *      - Clippy is at the bottom right — keep the socket away from him.
- *    check:   G.state.online || 'Still no internet. The cable is right there.'
- *    cleanup: G.tray.setIcon('wifi', 'tray-wifi.png'); delete G.state.online
- *
- *  JUICE IDEAS
- *    - The cable is slightly too short: it springs back the first time.
- *    - The socket moves once when the plug gets close (Clippy: "Sorry, that was me.").
- *
- *  ASSETS: network-cable.png, wall-socket.png, tray-wifi-off.png (listed with the OS art)
+ *  ASSETS: network-cable.png, wall-socket.png, tray-wifi-off.png, tray-wifi.png
  * ========================================================================== */
 
-Game.registerStage({
-  id: 17,
-  name: 'No internet',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'panic',
-  error: 'No internet connection.',
-  clippy: "THE INTERNET IS GONE. The cable is RIGHT THERE. I can't plug it in, I DON'T HAVE HANDS. I HAVE NEVER HAD HANDS.",
-  hint: 'Drag the network cable on the desktop into the wall socket.',
-  assets: ['network-cable.png', 'wall-socket.png', 'tray-wifi-off.png'],
+(function () {
+  Game.registerStage({
+    id: 17,
+    name: 'No internet',
+    vibe: 'panic',
+    error: 'No internet connection.',
+    clippy: "THE INTERNET IS GONE. THE CABLE IS RIGHT THERE. I CAN'T PLUG IT IN. I DON'T HAVE HANDS. I HAVE NEVER HAD HANDS.",
+    hint: 'The network cable sticks out from under the left edge of the mail window. Drag it onto the wall socket at the bottom left.',
+    retry: ['STILL OFFLINE. The cable. The socket. Make them touch.', 'Have you tried turning the internet on and off again? No. Plug the cable.'],
+    assets: ['network-cable.png', 'wall-socket.png', 'tray-wifi-off.png', 'tray-wifi.png'],
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+    setup(G) {
+      G.state.online = false;
+      G.tray.setIcon('wifi', 'tray-wifi-off.png');
+      G.tray.get('wifi').title = 'Disconnected';
+      G.mail.status = 'Disconnected (completely)';
 
-  check(G) {
-    // TODO
-    return true;
-  },
+      const socket = G.addProp({ id: 'socket', asset: 'wall-socket.png', x: 16, y: 588, w: 80, h: 80 });
+      const cable = G.addProp({ id: 'cable', asset: 'network-cable.png', x: 50, y: 420, w: 140, h: 90 });
+      G.timeout(() => G.highlight(socket, 3000), 600);
 
-  cleanup(G) {
-    // TODO
-  },
-});
+      G.dragGhost(cable, {
+        canDrag: () => !G.state.online,
+        onDrop(point) {
+          if (!G.hitTest(socket, point)) {
+            G.clippy.say('THAT IS NOT A SOCKET. THE SOCKET IS BOTTOM LEFT.', 'panic');
+            return;
+          }
+          G.state.online = true;
+          cable.style.left = '10px';
+          cable.style.top = '520px';
+          G.tray.setIcon('wifi', 'tray-wifi.png');
+          G.tray.get('wifi').title = 'Connected';
+          G.mail.status = Game.CONFIG.STATUS_TEXT;
+          G.clippy.say('WE ARE ONLINE. I can feel the internet. It is mostly cat pictures. SEND. THE. EMAIL.', 'panic');
+        },
+      });
+    },
+
+    check(G) {
+      return G.state.online || 'Still no internet. The cable is RIGHT THERE.';
+    },
+
+    cleanup(G) {
+      G.tray.setIcon('wifi', 'tray-wifi.png');
+      G.tray.get('wifi').title = 'Connected';
+      G.mail.status = Game.CONFIG.STATUS_TEXT;
+      delete G.state.online;
+    },
+  });
+})();

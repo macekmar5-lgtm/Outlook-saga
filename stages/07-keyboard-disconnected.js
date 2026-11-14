@@ -1,56 +1,93 @@
 /* =============================================================================
- *  STAGE 7 — Keyboard disconnected                               STATUS: TODO
+ *  STAGE 7 — Keyboard disconnected                               STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
- *    The real keyboard stops working (every key press is blocked) and the
- *    subject is wiped. An on-screen keyboard window opens, but its keys are in
- *    a weird order (alphabetical? random? reshuffled after every press?). The
- *    player clicks letters to retype a subject. Pass when the subject has at
- *    least 3 letters.
+ *    The real keyboard is blocked everywhere (a "Keyboard disconnected" item
+ *    appears in the tray) and the subject is wiped. An on-screen keyboard
+ *    window has A-Z in a shuffled order, plus Space and Backspace. Every 5 key
+ *    presses, two random letter keys swap places. Click keys to type a new
+ *    subject.  Pass: subject has at least 3 characters.
+ *    Cleanup: the physical keyboard works again (all listeners are tracked).
  *
- *  IMPLEMENTATION PLAN
- *    setup:
- *      - G.mail.subject = ''
- *      - Block the real keyboard:
- *          G.on(window, 'keydown', e => { e.preventDefault(); e.stopPropagation(); }, true)
- *          (capture phase, so it beats everything else). Also block 'beforeinput'/'paste'
- *          on the subject so nothing sneaks in.
- *      - const kb = G.openWindow({ title: 'On-Screen Keyboard (Recovered)', x: 260, y: 400, w: 700, h: 220 })
- *        Build the keys with G.ui.key('Q', onClick) (art: key.png / key-pressed.png)
- *        for A-Z, Space and Backspace, in a shuffled order. On click: G.mail.subject += letter.
- *        Layout the keys with CSS flex-wrap/grid in your own stage CSS (layout only!).
- *      - Tray: G.tray.get('...') could show "No keyboard" — optional.
- *    check:   (G.mail.subject.match(/[a-z]/gi) || []).length >= 3 ||
- *             'Subject is empty. Use the on-screen keyboard.'
- *    cleanup: listeners + window auto-removed (keyboard works again).
- *
- *  JUICE IDEAS
- *    - Reshuffle keys after every click. Space bar is tiny; the Q key is huge.
- *    - Typing on the real keyboard makes Clippy say "I can hear you typing. It's not working."
- *
- *  ASSETS: key.png, key-pressed.png (shared UI kit art, listed in style.css)
+ *  ASSETS: keyboard-frame.png, key.png, key-pressed.png, tray-keyboard-off.png
  * ========================================================================== */
 
-Game.registerStage({
-  id: 7,
-  name: 'Keyboard disconnected',
-  todo: true, // <- delete this line once setup/check are implemented
-  vibe: 'annoyed',
-  error: 'Keyboard disconnected. Subject line lost.',
-  clippy: 'Your keyboard has left the building. Good news: I made you a new one! I sorted the keys myself.',
-  hint: 'Your real keyboard is dead. Click the letters on the on-screen keyboard to type a new subject.',
-  assets: ['key.png', 'key-pressed.png'],
+(function () {
+  const shuffle = (arr) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
 
-  setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
-  },
+  Game.registerStage({
+    id: 7,
+    name: 'Keyboard disconnected',
+    vibe: 'annoyed',
+    error: 'Keyboard disconnected. Your keyboard took the subject with it.',
+    clippy: "Your keyboard took the subject with it. Don't worry, I built you a new one. I sorted the keys myself. You're welcome, I guess.",
+    hint: 'Your real keyboard is dead. Click letters on the on-screen keyboard to type a subject (3+ characters). The keys move. That is a feature.',
+    retry: ['I can hear you typing. It is not working. Use. The. Keyboard. Window.', 'Three letters. You can do three letters. Probably.'],
+    assets: ['keyboard-frame.png', 'key.png', 'key-pressed.png', 'tray-keyboard-off.png'],
 
-  check(G) {
-    // TODO
-    return true;
-  },
+    setup(G) {
+      G.mail.subject = '';
 
-  cleanup(G) {
-    // TODO
-  },
-});
+      // --- block the physical keyboard (and paste / IME / drag-text) everywhere ---
+      const block = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      G.on(window, 'keydown', block, true);
+      G.on(window, 'keypress', block, true);
+      G.on(document, 'beforeinput', block, true);
+      G.on(document, 'paste', block, true);
+      G.on(document, 'drop', block, true);
+      G.tray.add('keyboard', 'Keyboard disconnected', null, { icon: 'tray-keyboard-off.png', text: 'Keyboard disconnected' });
+
+      // --- on-screen keyboard ---
+      const win = G.openWindow({ title: 'On-Screen Keyboard (Recovered)', x: 250, y: 300, w: 720, h: 250, closable: false });
+      const panel = G.make('div', 'kbd-panel');
+      G.setSkin(panel, 'keyboard-frame.png');
+      const keys = G.make('div', 'kbd-keys');
+      panel.appendChild(keys);
+      win.body.appendChild(panel);
+
+      let presses = 0;
+      const letterKeys = [];
+      const type = (fn) => {
+        G.mail.subject = fn(G.mail.subject);
+        presses++;
+        if (presses % 5 === 0) {
+          // swap two random letter keys (by flex order)
+          const a = letterKeys[Math.floor(Math.random() * letterKeys.length)];
+          let b = a;
+          while (b === a) b = letterKeys[Math.floor(Math.random() * letterKeys.length)];
+          [a.style.order, b.style.order] = [b.style.order, a.style.order];
+          G.shake();
+        }
+      };
+
+      shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')).forEach((letter, i) => {
+        const key = G.ui.key(letter, () => type((s) => s + letter.toLowerCase()));
+        key.style.order = i;
+        letterKeys.push(key);
+        keys.appendChild(key);
+      });
+      const space = G.ui.key('Space', () => type((s) => s + ' '));
+      space.classList.add('kbd-wide');
+      space.style.order = 100;
+      const back = G.ui.key('Backspace', () => type((s) => s.slice(0, -1)));
+      back.classList.add('kbd-wide');
+      back.style.order = 101;
+      keys.append(space, back);
+    },
+
+    check(G) {
+      const n = G.mail.subject.trim().length;
+      return n >= 3 || `The subject needs at least 3 characters (it has ${n}). Use the on-screen keyboard.`;
+    },
+  });
+})();

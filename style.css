@@ -8,18 +8,19 @@
  *  dev-time marker that disappears as soon as the art exists.)
  *
  *  Sections:
- *     1. ART LIST + 9-slice settings   <- every OS art filename lives here
+ *     1. ART LIST + 9-slice settings   <- every OS/UI art filename lives here
  *     2. Base + game screen
  *     3. Missing-art placeholders
  *     4. Windows, title bars, popups
  *     5. UI kit (buttons, fields, checkboxes, progress bars, keys)
- *     6. Desktop, taskbar, tray, desktop icons
- *     7. Mail window
+ *     6. Desktop, taskbar, tray, desktop icons, props
+ *     7. Mail client (toolbar, sidebar, compose, status bar, word view)
  *     8. Clippy
- *     9. Effects (motion only)
+ *     9. Effects (motion only), drag ghosts, blackout
  *    10. Title screen + blue screen
  *    11. Cursors
  *    12. Text colours once the art exists
+ *    13. Stage windows (layout only)
  * ========================================================================== */
 
 /* -----------------------------------------------------------------------------
@@ -35,37 +36,42 @@
  *               scaled to fit. Missing file = dashed box with the filename.
  *   CURSORS   — CSS cursor: url(); if missing, the normal system cursor.
  *
+ *  Files are loaded by filename; a JPG/WebP/AVIF saved as .png still works.
+ *  (HEIC does not: run tools/fix-art.ps1.)
+ *
  *  9-slice: draw ONE small picture. Its corners stay exactly as drawn; the
  *  edges and middle stretch to any size. Per file:
  *     --slice-<name>  pixels of YOUR DRAWING that are corner/edge
  *                     (1 value, or 4 values: top right bottom left)
  *     --frame-<name>  how thick that edge appears on screen (same 1 or 4 values)
  *  The middle of the drawing is the element's background.
- *
- *  The engine pre-checks every file in --os-assets (and any other data-skin it
- *  finds in the page). For each file that exists it also adds the class
- *  .skin-<name> to #game (used in section 12 for text colours).
  * -------------------------------------------------------------------------- */
 :root {
   --os-assets:
-    /* SURFACES (data-skin) — frames, bars, buttons, fields */
+    /* SURFACES (data-skin) — frames, bars, buttons, fields, panels */
     "window-frame.png" "titlebar.png" "popup-frame.png"
     "btn-close.png" "btn-minimize.png" "btn-maximize.png"
     "button.png" "button-pressed.png" "input-box.png"
-    "taskbar.png" "start-button.png" "taskbar-button.png" "tray.png"
     "btn-send.png" "btn-send-pressed.png"
-    "attachment-chip.png" "clippy-bubble.png" "highlight-frame.png"
-    "key.png" "key-pressed.png" "checkbox.png" "checkbox-checked.png"
+    "format-bar.png" "body-paper.png" "attach-chip.png" "char-counter-bg.png" "statusbar.png"
+    "taskbar.png" "start-button.png" "taskbar-button.png" "tray.png"
+    "speech-bubble.png" "highlight-frame.png"
+    "key.png" "key-pressed.png" "keyboard-frame.png"
+    "checkbox.png" "checkbox-checked.png"
     "progress-bar.png" "progress-fill.png"
-    "title-background.png" "bluescreen.png"
+    "captcha-frame.png" "drop-zone.png"
+    "title-background.png" "bluescreen-bg.png"
     /* PICTURES (Game.asset) — icons */
+    "app-icon.png" "saga-logo.png"
+    "tb-new.png" "tb-reply.png" "tb-attach.png" "tb-delete.png" "tb-settings.png"
+    "folder-inbox.png" "folder-outbox.png" "folder-sent.png" "folder-drafts.png" "folder-bounced.png" "folder-trash.png"
     "tray-wifi.png" "tray-wifi-off.png" "tray-volume.png" "tray-battery.png"
-    "tray-caps.png" "tray-caps-on.png"
+    "tray-caps.png" "tray-caps-on.png" "tray-keyboard-off.png"
     "icon-error.png" "icon-warning.png" "icon-info.png"
     "icon-my-computer.png" "icon-folder.png" "icon-homework.png"
     "bluescreen-face.png"
     /* CURSORS — 32x32 (Chrome ignores cursors bigger than 128x128) */
-    "cursor.png" "cursor-hand.png" "cursor-loading.png";
+    "cursor.png" "cursor-hand.png" "cursor-loading.png" "text-cursor.png";
 
   /* ---- 9-slice settings (files not listed here are simply stretched) ---- */
   --slice-window-frame: 12;          --frame-window-frame: 6px;
@@ -74,20 +80,26 @@
   --slice-button: 6;                 --frame-button: 4px;
   --slice-button-pressed: 6;         --frame-button-pressed: 4px;
   --slice-input-box: 4;              --frame-input-box: 3px;
+  --slice-body-paper: 10;            --frame-body-paper: 5px;
+  --slice-attach-chip: 4;            --frame-attach-chip: 3px;
+  --slice-char-counter-bg: 6;        --frame-char-counter-bg: 4px;
+  --slice-statusbar: 4;              --frame-statusbar: 2px;
   --slice-taskbar: 6;                --frame-taskbar: 3px;
   --slice-taskbar-button: 6;         --frame-taskbar-button: 4px;
   --slice-tray: 6;                   --frame-tray: 3px;
-  --slice-attachment-chip: 4;        --frame-attachment-chip: 3px;
-  --slice-clippy-bubble: 16 16 32 16; --frame-clippy-bubble: 12px 12px 24px 12px; /* bottom is taller: draw the tail there */
+  --slice-speech-bubble: 16 16 32 16; --frame-speech-bubble: 12px 12px 24px 12px; /* bottom is taller: draw the tail there */
   --slice-highlight-frame: 10;       --frame-highlight-frame: 6px;
   --slice-key: 6;                    --frame-key: 4px;
   --slice-key-pressed: 6;            --frame-key-pressed: 4px;
+  --slice-keyboard-frame: 14;        --frame-keyboard-frame: 8px;
   --slice-progress-bar: 4;           --frame-progress-bar: 3px;
+  --slice-captcha-frame: 14;         --frame-captcha-frame: 8px;
+  --slice-drop-zone: 12;             --frame-drop-zone: 6px;
   /* how edges fill: stretch | repeat | round | space */
   --repeat-mode: stretch;
 
   /* ---- text colours (text is font-rendered; pick colours that read on your art).
-          Until the art exists, text stays --text so it reads on the placeholders. */
+          Until the art exists, text stays --text so it reads on the placeholders. ---- */
   --text: #000;
   --titlebar-text: #000;   /* our titlebar.png is light */
   --taskbar-text: #000;    /* our taskbar.png is light grey */
@@ -95,11 +107,13 @@
   --title-text: #fff;
   --bsod-text: #fff;
   --clock-late-text: #ff3030;
+  --clickable-word-text: #c00000;
 
   /* ---- cursor hotspots: "x y" in pixels inside the cursor image ---- */
   --hotspot-cursor: 0 0;
   --hotspot-cursor-hand: 6 0;
   --hotspot-cursor-loading: 16 16;
+  --hotspot-text-cursor: 16 16;
 
   /* ---- dev-only look of MISSING art (vanishes once the file exists).
           The flat fill keeps overlapping placeholder windows readable. ---- */
@@ -118,7 +132,7 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #000; /* letterbox bars outside the game screen */
+  background: #000; /* letterbox bars outside the game screen (and the blackout) */
 }
 
 body {
@@ -148,6 +162,7 @@ input, textarea {
   resize: none;
   user-select: text;
 }
+canvas { display: block; }
 :focus { outline: none; }
 * { scrollbar-width: none; }
 ::-webkit-scrollbar { display: none; }
@@ -329,6 +344,7 @@ input, textarea {
 .ui-field > input[readonly] { opacity: 0.75; }
 
 .ui-checkbox { display: inline-flex; align-items: center; gap: 6px; }
+.ui-checkbox.read-only { pointer-events: none; }
 .ui-checkbox-box { width: 16px; height: 16px; flex: none; }
 .ui-checkbox-box::after { font-size: 5px; line-height: 6px; left: 1px; }
 
@@ -338,7 +354,7 @@ input, textarea {
 .ui-key { min-width: 40px; height: 40px; padding: 0 8px; font-size: 16px; font-weight: bold; }
 
 /* -----------------------------------------------------------------------------
- *  6. DESKTOP, TASKBAR, TRAY, DESKTOP ICONS
+ *  6. DESKTOP, TASKBAR, TRAY, DESKTOP ICONS, PROPS
  *     (skins: taskbar, start-button, taskbar-button, tray; icons via Game.asset)
  * -------------------------------------------------------------------------- */
 .desktop-icon {
@@ -354,6 +370,8 @@ input, textarea {
 .desktop-icon-img { width: 48px; height: 48px; }
 .desktop-icon-label { padding: 1px 3px; font-size: 12px; line-height: 1.2; }
 
+.prop { position: absolute; }
+
 #taskbar {
   position: absolute;
   left: 0;
@@ -364,8 +382,8 @@ input, textarea {
   align-items: stretch;
 }
 #taskbar::after { left: 600px; }
-/* start-button.png is 120x40: the negative margins let it cover the taskbar's frame edge
-   so it shows at its real size instead of being squeezed inside the frame */
+/* start-button.png is 120x40: the negative margins let it cover the taskbar's
+   frame edge so it shows at its real size */
 #start-button { width: 120px; flex: none; }
 #game.skin-taskbar #start-button {
   margin: calc(-1 * var(--frame-taskbar)) 0 calc(-1 * var(--frame-taskbar)) calc(-1 * var(--frame-taskbar));
@@ -391,61 +409,72 @@ input, textarea {
 @keyframes blink { 50% { opacity: 0.35; } }
 
 /* -----------------------------------------------------------------------------
- *  7. MAIL WINDOW   (skins: window-frame, titlebar, button, input-box, attachment-chip)
+ *  7. MAIL CLIENT
+ *     skins: window-frame, titlebar, input-box, format-bar, body-paper,
+ *            attach-chip, char-counter-bg, btn-send(-pressed), statusbar
+ *     pictures: app-icon, saga-logo, tb-*, folder-*, ad-banner, user-avatar
  * -------------------------------------------------------------------------- */
-#mail-window { left: 190px; top: 24px; width: 770px; height: 600px; }
+#mail-window { left: 116px; top: 6px; width: 914px; height: 668px; }
 
-.mail-menubar { display: flex; gap: 2px; padding: 3px 4px; font-size: 12px; }
-.mail-menubar span { padding: 2px 7px; }
-
-.mail-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; }
-.send-btn { height: 40px; width: 110px; margin-right: 10px; font-size: 15px; font-weight: bold; }
-/* btn-send.png (110x40) has its own "SUBMIT" label drawn in: hide the text once the art exists */
-#game.skin-btn-send .send-btn { font-size: 0; }
-
+/* toolbar */
+.mail-toolbar { flex: none; display: flex; align-items: center; gap: 4px; height: 58px; padding: 4px 8px; }
+#saga-logo { width: 120px; height: 40px; margin-right: 10px; }
+.tb-btn { width: 56px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; }
+.tb-icon { width: 28px; height: 28px; }
 #ad-banner { width: 120px; height: 44px; margin-left: auto; }
 
+/* sidebar + compose side by side */
+.mail-main { flex: 1; min-height: 0; display: flex; }
+.mail-sidebar { flex: none; width: 150px; display: flex; flex-direction: column; gap: 2px; padding: 6px 6px 8px; }
+.folder { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 6px; font-size: 12px; white-space: nowrap; }
+.folder-icon { width: 20px; height: 20px; }
+.sidebar-user { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; text-align: center; word-break: break-all; }
+#user-avatar { width: 64px; height: 64px; }
+
+.mail-compose { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 4px 10px 6px 4px; }
 .mail-fields {
   display: grid;
-  grid-template-columns: 64px 1fr 72px;
+  grid-template-columns: 60px 1fr;
   align-items: center;
   gap: 5px 8px;
-  padding: 6px 12px 4px;
 }
-.mail-fields label { grid-column: 1; text-align: right; font-size: 12px; }
-.mail-fields .ui-field { grid-column: 2; }
-#user-avatar { grid-column: 3; grid-row: 1 / span 3; width: 64px; height: 64px; justify-self: end; }
+.mail-fields label { text-align: right; font-size: 12px; }
 
-.mail-attachments {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 4px 12px 4px 20px;
-}
-.attach-label { width: 52px; text-align: right; font-size: 12px; }
+#format-bar { flex: none; display: flex; align-items: center; gap: 12px; height: 28px; margin-top: 6px; padding: 0 10px; font-size: 12px; }
+.fmt-b { font-weight: bold; }
+.fmt-i { font-style: italic; }
+.fmt-u { text-decoration: underline; }
+
+.mail-attachments { flex: none; display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 4px 0; }
+.attach-label { width: 60px; flex: none; text-align: right; font-size: 12px; }
 #attach-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .mail-attachments.empty #attach-list::before { content: "(no attachments)"; opacity: 0.6; font-style: italic; font-size: 12px; }
-.attachment {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 8px 0 4px;
-  font-size: 12px;
-}
+.attachment { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 8px 0 4px; font-size: 12px; }
 .attachment::after { top: auto; bottom: 0; font-size: 7px; line-height: 8px; }
 .attachment-icon { width: 20px; height: 20px; }
 .attachment-size { opacity: 0.65; }
 
-#mail-body-wrap { flex: 1; display: flex; margin: 4px 12px; }
+#mail-body-wrap { flex: 1; min-height: 0; display: flex; padding: 10px 14px; }
 #mail-body { font: 15px/1.5 Arial, sans-serif; }
 
-.mail-statusbar { display: flex; justify-content: space-between; padding: 4px 12px 5px; font-size: 11px; }
+.compose-footer { flex: none; display: flex; align-items: center; justify-content: space-between; padding-top: 6px; }
+#char-counter { padding: 4px 12px; font-size: 12px; }
 #char-counter.over { color: #c00; font-weight: bold; }
+.send-btn { height: 40px; width: 110px; font-size: 15px; font-weight: bold; }
+/* btn-send.png (110x40) has its own label drawn in: hide the text once the art exists */
+#game.skin-btn-send .send-btn { font-size: 0; }
+
+.mail-statusbar { flex: none; display: flex; align-items: center; gap: 12px; height: 26px; padding: 0 10px; font-size: 11px; }
+#status-text { flex: 1; }
+#send-progress { display: flex; align-items: center; gap: 6px; width: 230px; }
+#send-progress .ui-progress { height: 14px; flex: 1; }
+
+/* clickable word view (Game.wordView) — replaces the textarea for some stages */
+.word-view { flex: 1; overflow: auto; white-space: pre-wrap; font: 15px/1.5 Arial, sans-serif; }
+.word { font-weight: bold; color: var(--clickable-word-text); }
 
 /* -----------------------------------------------------------------------------
- *  8. CLIPPY   (art: clippy-<mood>.png; skin: clippy-bubble)
+ *  8. CLIPPY   (art: clippy-<mood>.png; skin: speech-bubble)
  * -------------------------------------------------------------------------- */
 #clippy {
   position: absolute;
@@ -481,7 +510,7 @@ input, textarea {
 @keyframes bubble-pop { from { transform: scale(0.8); opacity: 0; } }
 
 /* -----------------------------------------------------------------------------
- *  9. EFFECTS (motion only — no drawing)
+ *  9. EFFECTS (motion only — no drawing), DRAG GHOSTS, BLACKOUT
  * -------------------------------------------------------------------------- */
 .highlight-frame {
   position: absolute;
@@ -499,11 +528,25 @@ input, textarea {
 
 .draggable { touch-action: none; }
 .dragging  { z-index: 1000; opacity: 0.85; }
+.drag-source { opacity: 0.35; }
+.drag-ghost { opacity: 0.9; }
 
 .flying-envelope { position: absolute; width: 64px; height: 48px; }
 
+/* Game.blackout(): hide everything; the black page background shows through */
+#screen.blackout > :not(#layer-overlay) { visibility: hidden; }
+.blackout-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font: 40px "Segoe UI", Tahoma, sans-serif;
+}
+
 /* -----------------------------------------------------------------------------
- *  10. TITLE SCREEN + BLUE SCREEN  (skins: title-background, bluescreen)
+ *  10. TITLE SCREEN + BLUE SCREEN  (skins: title-background, bluescreen-bg)
  * -------------------------------------------------------------------------- */
 #title-screen {
   position: absolute;
@@ -542,6 +585,7 @@ input, textarea {
 #game.skin-cursor,
 #game.skin-cursor * { cursor: var(--img-cursor) var(--hotspot-cursor), default; }
 #game.skin-cursor :is(input:not([readonly]), textarea) { cursor: text; }
+#game.skin-text-cursor :is(input:not([readonly]), textarea) { cursor: var(--img-text-cursor) var(--hotspot-text-cursor), text; }
 #game.skin-cursor-hand :is(button, .clickable, .desktop-icon, #clippy-img, .draggable) {
   cursor: var(--img-cursor-hand) var(--hotspot-cursor-hand), pointer;
 }
@@ -561,4 +605,53 @@ input, textarea {
 #game.skin-taskbar #taskbar                  { color: var(--taskbar-text); }
 #game.skin-wallpaper .desktop-icon-label     { color: var(--desktop-text); }
 #game.skin-title-background .title-tagline   { color: var(--title-text); }
-#game.skin-bluescreen .bsod                  { color: var(--bsod-text); }
+#game.skin-bluescreen-bg .bsod               { color: var(--bsod-text); }
+
+/* -----------------------------------------------------------------------------
+ *  13. STAGE WINDOWS (layout only — the art comes from the files named in each stage)
+ * -------------------------------------------------------------------------- */
+.stage-col { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.stage-row { display: flex; gap: 8px; align-items: center; }
+.stage-center { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.stage-msg { min-height: 18px; font-weight: bold; }
+.stage-note { font-size: 12px; opacity: 0.8; }
+
+/* stage 6: Convertinator drop zone (drop-zone.png) */
+.drop-zone { height: 110px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; }
+
+/* stage 7: on-screen keyboard (keyboard-frame.png + key.png) */
+.kbd-panel { padding: 12px; }
+.kbd-keys { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.kbd-keys .ui-key { min-width: 44px; }
+.kbd-keys .kbd-wide { min-width: 140px; }
+
+/* stage 9: WinRAWR nag */
+.winrawr-body { position: relative; height: 100%; }
+.winrawr-text { position: absolute; left: 130px; top: 10px; right: 10px; white-space: pre-line; line-height: 1.4; }
+.winrawr-logo { position: absolute; left: 10px; top: 10px; }
+.winrawr-face { font-size: 44px; font-weight: bold; }
+.winrawr-body .ui-btn { position: absolute; }
+
+/* stage 11: signature pad (signature-pad.png under a drawing canvas) */
+.sig-pad { position: relative; width: 480px; height: 200px; }
+.sig-pad > canvas { position: absolute; inset: 0; cursor: crosshair; }
+
+/* stage 12: mood meter (mood-meter.png + rotating mood-needle.png) */
+.mood-dial { position: relative; width: 200px; height: 110px; margin: 0 auto; }
+.mood-needle { position: absolute; left: 95px; bottom: 0; transform-origin: 50% 100%; transition: transform 0.4s ease-out; }
+.mood-label { font-size: 18px; font-weight: bold; text-align: center; }
+
+/* stage 13: battery */
+.battery-big { font-size: 28px; font-weight: bold; text-align: center; }
+
+/* stage 14: webcam */
+.webcam-preview { transition: filter 0.3s; }
+.webcam-preview.blurry { filter: blur(6px); }
+
+/* stage 15: account form */
+.rule-list { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+
+/* stage 16: captcha (captcha-frame.png, boss-N.png, checkbox overlays) */
+.captcha-grid { display: grid; grid-template-columns: repeat(3, 116px); gap: 6px; padding: 10px; justify-content: center; }
+.captcha-tile { position: relative; width: 116px; height: 116px; }
+.captcha-tile .captcha-check { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; }

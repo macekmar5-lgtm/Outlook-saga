@@ -17,8 +17,8 @@ Game.registerStage({
   name: 'Caps Lock stuck',
   vibe: 'happy',
   error: 'Subject line is in ALL CAPS. Recipient feels yelled at.',
-  clippy: "Whoa, easy there! Your boss thinks you're yelling. Is your Caps Lock stuck? It happens to the best of us!",
-  hint: 'Click "CAPS" in the taskbar tray next to the clock to turn Caps Lock off. Then retype the subject.',
+  clippy: "Whoa, easy there! The printer thinks you're yelling. Is your Caps Lock stuck? It happens to the best of us!",
+  hint: 'Click the Caps Lock icon in the taskbar tray (bottom right, next to the clock) to turn it off. Then retype the subject.',
   retry: [
     'STILL SHOUTING. Sorry. I mean: still shouting.',
     'Caps Lock lives in the tray. Bottom right. Next to the clock. :)',
@@ -54,7 +54,7 @@ Game.registerStage({
   },
 
   check(G) {
-    if (G.state.capsLock) return 'Caps Lock is still on. YOUR BOSS CAN HEAR YOU.';
+    if (G.state.capsLock) return 'Caps Lock is still on. THE PRINTER CAN HEAR YOU.';
     const subject = G.mail.subject.trim();
     if (!subject) return 'The subject is empty now. You need one, remember?';
     if (!/[a-z]/.test(subject)) return 'The subject is still in ALL CAPS. Retype it with normal letters.';
