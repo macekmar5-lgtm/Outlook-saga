@@ -631,6 +631,19 @@ canvas { display: block; }
 .stage-msg { min-height: 18px; font-weight: bold; }
 .stage-note { font-size: 12px; opacity: 0.8; }
 
+/* stage 4: the cat photo gets squished (motion on our own art: scale, no drawing).
+   Squish anchors at the bottom so he's pressed onto the floor. 2.2s = SQUISH_MS in the stage. */
+.cat-stage { width: 300px; height: 220px; display: flex; align-items: flex-end; justify-content: center; }
+.cat-stage .asset { transform-origin: 50% 100%; }
+/* One smooth squish straight down (no bounce). Change the end value in both places
+   below to make him flatter/wider: scale(width, height). */
+.cat-squishing { animation: cat-squish 2.2s ease-in-out forwards; }
+.cat-squished { transform: scale(1.15, 0.12); }
+@keyframes cat-squish {
+  from { transform: scale(1, 1); }
+  to   { transform: scale(1.15, 0.12); }
+}
+
 /* stage 6: Convertinator drop zone (drop-zone.png) */
 .drop-zone { height: 110px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; }
 

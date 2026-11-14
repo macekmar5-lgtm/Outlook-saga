@@ -4,13 +4,16 @@
  *  WHAT THE PLAYER MUST DO
  *    cat.jpg is 4.2 GB. Click the cat.jpg chip in the email: a preview window
  *    opens with the cat (cat.png), its size and a "Compress" button. Press it:
- *    a progress bar runs, the cat gets visibly squished (cat-squished.png) and
- *    the size becomes 3 MB.  Pass: cat is compressed.
+ *    a progress bar runs while the cat photo itself gets squeezed (CSS
+ *    animation on the picture: .cat-squishing / .cat-squished in style.css)
+ *    and it ends up flat. The size becomes 3 MB.  Pass: cat is compressed.
  *
- *  ASSETS: cat.png, cat-squished.png, file-photo.png, progress-bar.png, progress-fill.png
+ *  ASSETS: cat.png, file-photo.png, progress-bar.png, progress-fill.png
  * ========================================================================== */
 
 (function () {
+  const SQUISH_MS = 2200; // keep in sync with the cat-squish animation in style.css
+
   function openPreview(G) {
     const compressed = G.state.catCompressed;
     const win = G.openApp({
@@ -20,7 +23,9 @@
     if (!win.created) return;
 
     const col = G.make('div', 'stage-center');
-    const img = G.asset(compressed ? 'cat-squished.png' : 'cat.png', { w: 300, h: 220 });
+    const stageBox = G.make('div', 'cat-stage'); // the cat gets squished inside this box
+    const img = G.asset('cat.png', { w: 300, h: 220, className: compressed ? 'cat-squished' : '' });
+    stageBox.appendChild(img);
     const size = G.make('div', 'mood-label', compressed ? 'cat.jpg - 3 MB' : 'cat.jpg - 4.2 GB');
     const label = G.make('div', 'stage-note', compressed ? 'Compressed. He is fine. Probably.' : 'Limit: 25 MB');
     const bar = G.ui.progress(0);
@@ -32,8 +37,9 @@
       }
       btn.disabled = true;
       bar.classList.remove('hidden');
-      G.runProgress(bar, 2200, ['Compressing...', 'Squeezing the cat...', 'Removing unnecessary fluff...', 'Done!'], label).then(() => {
-        G.setAsset(img, 'cat-squished.png');
+      img.classList.add('cat-squishing'); // the squish animation runs alongside the bar
+      G.runProgress(bar, SQUISH_MS, ['Compressing...', 'Squeezing the cat...', 'Removing unnecessary fluff...', 'Done!'], label).then(() => {
+        img.classList.replace('cat-squishing', 'cat-squished');
         size.textContent = 'cat.jpg - 3 MB';
         G.attachments.setSize('cat.jpg', '3 MB');
         G.state.catCompressed = true;
@@ -41,7 +47,7 @@
         G.clippy.say(G.line('compressed'), 'happy');
       });
     });
-    col.append(img, size, bar, label, btn);
+    col.append(stageBox, size, bar, label, btn);
     win.body.appendChild(col);
   }
 
@@ -50,7 +56,7 @@
     name: 'File too big',
     vibe: 'happy',
     // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "4"
-    assets: ['cat.png', 'cat-squished.png', 'file-photo.png', 'progress-bar.png', 'progress-fill.png'],
+    assets: ['cat.png', 'file-photo.png', 'progress-bar.png', 'progress-fill.png'],
 
     setup(G) {
       G.state.catCompressed = false;

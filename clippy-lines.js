@@ -261,13 +261,12 @@ Game.lines = {
     "16": {
       "error": "Server needs to confirm you are human.",
       "clippy": "Prove you're human. HA. HAHA. Select the buses. Does the edge of the bus count? NOBODY KNOWS. NOBODY HAS EVER KNOWN.",
-      "hint": "Click every square that shows part of a bus, then Verify. If it says \"Please try again\", it is lying. Verify again.",
+      "hint": "Click every square that shows part of a bus (not the black cabs), then Verify.",
       "retry": [
         "THE SERVER STILL THINKS YOU ARE A ROBOT. Honestly? Fair.",
         "Click. The. Bus."
       ],
       "lines": {
-        "fakeFail": "\"PLEASE TRY AGAIN.\" IT WAS RIGHT. IT WAS RIGHT AND THEY KNOW IT. Do it again.",
         "verified": "VERIFIED HUMAN. The bar was on the floor and you cleared it. Barely."
       }
     },

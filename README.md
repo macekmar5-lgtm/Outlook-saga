@@ -42,7 +42,7 @@ Open each link (from the project folder), fail the stage once by pressing SUBMIT
 | 1 | `index.html?stage=1&nodeadline=1` | Type anything in **Subject**, press SUBMIT. |
 | 2 | `index.html?stage=2&nodeadline=1` | Subject is forced to CAPS. Click the **Caps Lock icon** in the tray (bottom right), retype the subject with lowercase letters. |
 | 3 | `index.html?stage=3&nodeadline=1` | Drag `definitely_not_a_virus.exe` + one more chip onto the **Recycle Bin** (bottom left). Dragging `cat.jpg` there bounces back ("Not the cat"). Max 3 left. |
-| 4 | `index.html?stage=4&nodeadline=1` | Click the **cat.jpg** chip → preview → **Compress** → wait for the bar → squished cat, 3 MB. |
+| 4 | `index.html?stage=4&nodeadline=1` | Click the **cat.jpg** chip → preview → **Compress** → the cat photo gets squished flat while the bar runs → 3 MB. |
 | 5 | `index.html?stage=5&nodeadline=1` | Body is ~1400 chars, counter red. Delete text until it's 20–500 characters. |
 | 6 | `index.html?stage=6&nodeadline=1` | **Double-click** "Convertinator 3000" (top right) → drag the **cat.jpg** chip into the drop zone → wait → it becomes cat.png. |
 | 7 | `index.html?stage=7&nodeadline=1` | Real keyboard does nothing. Click 3+ keys on the **on-screen keyboard** (keys swap every 5 presses). |
@@ -54,7 +54,7 @@ Open each link (from the project folder), fail the stage once by pressing SUBMIT
 | 13 | `index.html?stage=13&nodeadline=1` | Within 20 s (shown in the tray) drag the **charger plug** (peeking out under the left edge of the mail window) onto the **laptop port** (right edge). Stray clicks cost 1 s. Let it hit 0 once: "Laptop died.", -2 min, restart. |
 | 14 | `index.html?stage=14&nodeadline=1` | Click **Webcam** (top right) → **Background effects** → **Office**. (Blur fails: "Still a bed.") |
 | 15 | `index.html?stage=15&nodeadline=1` | Type a username and press **Create** repeatedly; each try reveals a rule. `Bounce8kiwiMayprinter` passes all 7. From changes to your username. |
-| 16 | `index.html?stage=16&nodeadline=1` | Bus captcha (London street, 4×4 squares). Select the 6 squares with the red buses (the 3 middle-row squares on the right + the 3 below them; NOT the black cabs) → **Verify** → it says "Please try again" once → select them again → **Verify**. Skip or wrong squares fail. |
+| 16 | `index.html?stage=16&nodeadline=1` | Bus captcha (London street, 4×4 squares). Select the 6 squares with the red buses (the 3 middle-row squares on the right + the 3 below them; NOT the black cabs) → **Verify**. Skip or wrong squares fail. |
 | 17 | `index.html?stage=17&nodeadline=1` | Wifi is off. Drag the **network cable** (under the left edge of the mail window) onto the **wall socket** (bottom left). |
 | 18 | `index.html?stage=18` | "Email delivered successfully", then the blue screen. Any key after a few seconds restarts. |
 
@@ -169,7 +169,7 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 
 ### Stages
 - 3: [x] `file-photo.png`, [x] `file-doc.png`, [x] `file-exe.png` (20×20), [x] `trash-empty.png`, [x] `trash-full.png` (48×48)
-- 4: [x] `cat.png`, [x] `cat-squished.png` (~300×220)
+- 4: [x] `cat.png` (~300×220; the game squishes this same picture with an animation. `cat-squished.png` is no longer used)
 - 6: [ ] `icon-converter.png` (48×48), [ ] `drop-zone.png` (9-slice, ~300×110)
 - 7: `keyboard-frame.png`, `key.png`, `key-pressed.png`, `tray-keyboard-off.png` (above)
 - 8: [ ] `icon-zip.png` (48×48)
