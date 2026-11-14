@@ -1,0 +1,551 @@
+/* =============================================================================
+ *  OUTLOOK SAGA — style.css
+ *
+ *  ART RULE: CSS here only does LAYOUT, POSITIONING, TEXT and STRETCHING OUR
+ *  IMAGES. No CSS-drawn visuals: no gradients, shadows, rounded corners,
+ *  coloured boxes, drawn borders or shapes. Every visual is a file in /assets.
+ *  (The one exception is the dashed "missing art" placeholder, which is a
+ *  dev-time marker that disappears as soon as the art exists.)
+ *
+ *  Sections:
+ *     1. ART LIST + 9-slice settings   <- every OS art filename lives here
+ *     2. Base + game screen
+ *     3. Missing-art placeholders
+ *     4. Windows, title bars, popups
+ *     5. UI kit (buttons, fields, checkboxes, progress bars, keys)
+ *     6. Desktop, taskbar, tray, desktop icons
+ *     7. Mail window
+ *     8. Clippy
+ *     9. Effects (motion only)
+ *    10. Title screen + blue screen
+ *    11. Cursors
+ *    12. Text colours once the art exists
+ * ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+ *  1. ART LIST + 9-SLICE SETTINGS
+ *  -----------------------------------------------------------------------------
+ *  How art gets on screen:
+ *   SURFACES  — any element with  data-skin="file.png"  is drawn with that image.
+ *               engine.js checks if the file exists and, if so, draws it with
+ *               border-image: 9-slice when the file has a --slice-<name> entry
+ *               below, otherwise stretched over the whole element.
+ *               Missing file = dashed box with the filename on it.
+ *   PICTURES  — Game.asset('file.png') / data-asset="file.png": an <img>,
+ *               scaled to fit. Missing file = dashed box with the filename.
+ *   CURSORS   — CSS cursor: url(); if missing, the normal system cursor.
+ *
+ *  9-slice: draw ONE small picture. Its corners stay exactly as drawn; the
+ *  edges and middle stretch to any size. Per file:
+ *     --slice-<name>  pixels of YOUR DRAWING that are corner/edge
+ *                     (1 value, or 4 values: top right bottom left)
+ *     --frame-<name>  how thick that edge appears on screen (same 1 or 4 values)
+ *  The middle of the drawing is the element's background.
+ *
+ *  The engine pre-checks every file in --os-assets (and any other data-skin it
+ *  finds in the page). For each file that exists it also adds the class
+ *  .skin-<name> to #game (used in section 12 for text colours).
+ * -------------------------------------------------------------------------- */
+:root {
+  --os-assets:
+    /* SURFACES (data-skin) — frames, bars, buttons, fields */
+    "window-frame.png" "titlebar.png" "popup-frame.png"
+    "btn-close.png" "btn-minimize.png" "btn-maximize.png"
+    "button.png" "button-pressed.png" "input-box.png"
+    "taskbar.png" "start-button.png" "taskbar-button.png" "tray.png"
+    "attachment-chip.png" "clippy-bubble.png" "highlight-frame.png"
+    "key.png" "key-pressed.png" "checkbox.png" "checkbox-checked.png"
+    "progress-bar.png" "progress-fill.png"
+    "title-background.png" "bluescreen.png"
+    /* PICTURES (Game.asset) — icons */
+    "tray-wifi.png" "tray-wifi-off.png" "tray-volume.png" "tray-battery.png"
+    "tray-caps.png" "tray-caps-on.png"
+    "icon-error.png" "icon-warning.png" "icon-info.png"
+    "icon-my-computer.png" "icon-folder.png" "icon-homework.png"
+    "bluescreen-face.png"
+    /* CURSORS — 32x32 (Chrome ignores cursors bigger than 128x128) */
+    "cursor.png" "cursor-hand.png" "cursor-loading.png";
+
+  /* ---- 9-slice settings (files not listed here are simply stretched) ---- */
+  --slice-window-frame: 12;          --frame-window-frame: 6px;
+  --slice-popup-frame: 12;           --frame-popup-frame: 6px;
+  --slice-titlebar: 8;               --frame-titlebar: 4px;
+  --slice-button: 6;                 --frame-button: 4px;
+  --slice-button-pressed: 6;         --frame-button-pressed: 4px;
+  --slice-input-box: 4;              --frame-input-box: 3px;
+  --slice-taskbar: 6;                --frame-taskbar: 3px;
+  --slice-taskbar-button: 6;         --frame-taskbar-button: 4px;
+  --slice-tray: 6;                   --frame-tray: 3px;
+  --slice-attachment-chip: 4;        --frame-attachment-chip: 3px;
+  --slice-clippy-bubble: 16 16 32 16; --frame-clippy-bubble: 12px 12px 24px 12px; /* bottom is taller: draw the tail there */
+  --slice-highlight-frame: 10;       --frame-highlight-frame: 6px;
+  --slice-key: 6;                    --frame-key: 4px;
+  --slice-key-pressed: 6;            --frame-key-pressed: 4px;
+  --slice-progress-bar: 4;           --frame-progress-bar: 3px;
+  /* how edges fill: stretch | repeat | round | space */
+  --repeat-mode: stretch;
+
+  /* ---- text colours (text is font-rendered; pick colours that read on your art).
+          Until the art exists, text stays --text so it reads on the placeholders. */
+  --text: #000;
+  --titlebar-text: #fff;
+  --taskbar-text: #fff;
+  --desktop-text: #fff;
+  --title-text: #fff;
+  --bsod-text: #fff;
+  --clock-late-text: #ff3030;
+
+  /* ---- cursor hotspots: "x y" in pixels inside the cursor image ---- */
+  --hotspot-cursor: 0 0;
+  --hotspot-cursor-hand: 6 0;
+  --hotspot-cursor-loading: 16 16;
+
+  /* ---- dev-only look of MISSING art (vanishes once the file exists).
+          The flat fill keeps overlapping placeholder windows readable. ---- */
+  --placeholder-line: #ff2bd6;
+  --placeholder-label: #b0008a;
+  --placeholder-fill: #ececec;
+}
+
+/* -----------------------------------------------------------------------------
+ *  2. BASE + GAME SCREEN
+ *  #game is always 1280x720; engine.js scales it with a transform.
+ * -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000; /* letterbox bars outside the game screen */
+}
+
+body {
+  font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  user-select: none;
+}
+
+/* Strip every browser-drawn visual: button faces, field borders, focus rings, scrollbars. */
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+}
+input, textarea {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  resize: none;
+  user-select: text;
+}
+:focus { outline: none; }
+* { scrollbar-width: none; }
+::-webkit-scrollbar { display: none; }
+
+.hidden { display: none !important; }
+
+#game {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1280px;
+  height: 720px;
+  transform-origin: 0 0;
+  overflow: hidden;
+}
+#screen { position: absolute; inset: 0; overflow: hidden; }
+
+/* Full-screen layers ignore clicks themselves; their children don't. */
+.layer { position: absolute; inset: 0; pointer-events: none; }
+.layer > * { pointer-events: auto; }
+
+#desktop { position: absolute; inset: 0; }
+#wallpaper { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; }
+#layer-icons     { z-index: 1; }
+#layer-windows   { z-index: 2; }
+#clippy          { z-index: 4; }
+#taskbar         { z-index: 5; }
+#layer-highlight { z-index: 6; }
+#layer-highlight > * { pointer-events: none; }
+#layer-popups    { z-index: 10; }
+#layer-fx        { z-index: 20; }
+#layer-fx > *    { pointer-events: none; }
+#layer-overlay   { z-index: 30; }
+#title-screen    { z-index: 40; }
+
+/* -----------------------------------------------------------------------------
+ *  3. MISSING-ART PLACEHOLDERS  (dev-time only)
+ *  Surfaces: every [data-skin] starts as a dashed box with its filename. The
+ *  engine overrides this per file once the image has loaded.
+ *  Pictures: Game.asset() boxes get .asset-missing when the file fails.
+ *  Keep this block FIRST among the element rules so layouts can override
+ *  `position`.
+ * -------------------------------------------------------------------------- */
+[data-skin] {
+  position: relative;
+  outline: 2px dashed var(--placeholder-line);
+  outline-offset: -2px;
+  background-color: var(--placeholder-fill);
+}
+[data-skin]::after {
+  content: attr(data-skin);
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  z-index: 3;
+  max-width: calc(100% - 4px);
+  overflow: hidden;
+  white-space: nowrap;
+  font: bold 9px/11px "Courier New", monospace;
+  font-style: normal;
+  color: var(--placeholder-label);
+  pointer-events: none;
+}
+
+.asset {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+}
+.asset > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.asset-missing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  min-height: 16px;
+  padding: 2px;
+  overflow: hidden;
+  outline: 2px dashed var(--placeholder-line);
+  outline-offset: -2px;
+  background-color: var(--placeholder-fill);
+  color: var(--placeholder-label);
+  font: bold 10px/1.1 "Courier New", monospace;
+  text-align: center;
+  word-break: break-all;
+}
+#wallpaper.asset-missing { font-size: 22px; background-color: #d4d4d4; }
+
+/* -----------------------------------------------------------------------------
+ *  4. WINDOWS, TITLE BARS, POPUPS   (skins: window-frame, titlebar, popup-frame,
+ *                                    btn-close/minimize/maximize)
+ * -------------------------------------------------------------------------- */
+.xp-window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+}
+.xp-window::after { top: -13px; left: 0; } /* frame label sits just above the window */
+
+.xp-titlebar {
+  flex: none;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 7px;
+  font-weight: bold;
+  font-size: 13px;
+}
+.xp-titlebar::after { left: auto; right: 80px; top: auto; bottom: 1px; }
+.xp-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.xp-title-icon { width: 16px; height: 16px; }
+.xp-title-buttons { display: flex; gap: 2px; }
+.xp-tb-btn { width: 21px; height: 21px; flex: none; }
+.xp-tb-btn::after { font-size: 6px; line-height: 7px; left: 1px; } /* tiny label in a tiny button */
+
+.xp-body { flex: 1; position: relative; padding: 10px; overflow: auto; }
+.app-text { white-space: pre-line; line-height: 1.45; padding: 6px 4px; }
+
+/* Popups (Game.popup) */
+.popup-blocker {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.layer > .popup-blocker.passthrough { pointer-events: none; }
+.popup-blocker.passthrough > * { pointer-events: auto; }
+
+.xp-window.popup {
+  position: relative;
+  min-width: 360px;
+  max-width: 540px;
+  animation: popup-in 0.14s ease-out;
+}
+@keyframes popup-in { from { transform: scale(0.85); opacity: 0; } }
+.popup-body { display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px 10px; }
+.popup-text { white-space: pre-line; line-height: 1.45; padding-top: 4px; }
+.popup-icon { width: 42px; height: 42px; }
+.popup-buttons { display: flex; justify-content: center; gap: 8px; padding: 8px 14px 16px; }
+
+/* -----------------------------------------------------------------------------
+ *  5. UI KIT  (Game.ui.* — skins: button, button-pressed, input-box, checkbox,
+ *              checkbox-checked, progress-bar, progress-fill, key, key-pressed)
+ * -------------------------------------------------------------------------- */
+.ui-btn {
+  min-width: 75px;
+  height: 26px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ui-btn::after { top: auto; bottom: 0; font-size: 8px; line-height: 9px; }
+.ui-btn:disabled { opacity: 0.5; }
+
+.ui-field {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 6px;
+}
+.ui-field::after { left: auto; right: 4px; }
+.ui-field > input { flex: 1; width: 100%; min-width: 0; height: 100%; font-size: 13px; }
+.ui-field.multiline { height: auto; align-items: stretch; padding: 6px 8px; }
+.ui-field.multiline > textarea { flex: 1; width: 100%; height: 100%; }
+.ui-field > input[readonly] { opacity: 0.75; }
+
+.ui-checkbox { display: inline-flex; align-items: center; gap: 6px; }
+.ui-checkbox-box { width: 16px; height: 16px; flex: none; }
+.ui-checkbox-box::after { font-size: 5px; line-height: 6px; left: 1px; }
+
+.ui-progress { height: 20px; width: 100%; }
+.ui-progress-fill { height: 100%; width: 0; }
+
+.ui-key { min-width: 40px; height: 40px; padding: 0 8px; font-size: 16px; font-weight: bold; }
+
+/* -----------------------------------------------------------------------------
+ *  6. DESKTOP, TASKBAR, TRAY, DESKTOP ICONS
+ *     (skins: taskbar, start-button, taskbar-button, tray; icons via Game.asset)
+ * -------------------------------------------------------------------------- */
+.desktop-icon {
+  position: absolute;
+  width: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  text-align: center;
+}
+.desktop-icon-img { width: 48px; height: 48px; }
+.desktop-icon-label { padding: 1px 3px; font-size: 12px; line-height: 1.2; }
+
+#taskbar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1280px;
+  height: 40px;
+  display: flex;
+  align-items: stretch;
+}
+#taskbar::after { left: 600px; }
+#start-button { width: 110px; flex: none; }
+#taskbar-tasks { flex: 1; display: flex; gap: 4px; padding: 5px 8px; }
+.task-button {
+  width: 190px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 12px;
+  text-align: left;
+}
+#tray { display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+#tray::after { top: auto; bottom: 0; }
+#tray-icons { display: flex; align-items: center; gap: 4px; }
+.tray-item { display: flex; align-items: center; gap: 3px; height: 24px; padding: 0 2px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+.tray-icon { width: 20px; height: 20px; }
+.tray-icon.asset-missing { font-size: 5px; line-height: 6px; padding: 0; }
+#clock { font-size: 12px; padding: 0 2px; min-width: 58px; text-align: center; }
+#clock.late { color: var(--clock-late-text); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.35; } }
+
+/* -----------------------------------------------------------------------------
+ *  7. MAIL WINDOW   (skins: window-frame, titlebar, button, input-box, attachment-chip)
+ * -------------------------------------------------------------------------- */
+#mail-window { left: 190px; top: 24px; width: 770px; height: 600px; }
+
+.mail-menubar { display: flex; gap: 2px; padding: 3px 4px; font-size: 12px; }
+.mail-menubar span { padding: 2px 7px; }
+
+.mail-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; }
+.send-btn { height: 36px; min-width: 96px; margin-right: 10px; font-size: 15px; font-weight: bold; }
+
+.mail-fields {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  gap: 5px 8px;
+  padding: 6px 12px 4px;
+}
+.mail-fields label { text-align: right; font-size: 12px; }
+
+.mail-attachments {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 12px 4px 20px;
+}
+.attach-label { width: 52px; text-align: right; font-size: 12px; }
+#attach-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.mail-attachments.empty #attach-list::before { content: "(no attachments)"; opacity: 0.6; font-style: italic; font-size: 12px; }
+.attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px 0 4px;
+  font-size: 12px;
+}
+.attachment::after { top: auto; bottom: 0; font-size: 7px; line-height: 8px; }
+.attachment-icon { width: 20px; height: 20px; }
+.attachment-size { opacity: 0.65; }
+
+#mail-body-wrap { flex: 1; display: flex; margin: 4px 12px; }
+#mail-body { font: 15px/1.5 Arial, sans-serif; }
+
+.mail-statusbar { display: flex; justify-content: space-between; padding: 4px 12px 5px; font-size: 11px; }
+#char-counter.over { color: #c00; font-weight: bold; }
+
+/* -----------------------------------------------------------------------------
+ *  8. CLIPPY   (art: clippy-<mood>.png; skin: clippy-bubble)
+ * -------------------------------------------------------------------------- */
+#clippy {
+  position: absolute;
+  right: 24px;
+  bottom: 50px;
+  width: 128px;
+  height: 128px;
+  pointer-events: none;
+}
+#clippy-img {
+  width: 128px;
+  height: 128px;
+  pointer-events: auto;
+  animation: clippy-bob 3s ease-in-out infinite;
+}
+#clippy[data-mood="angry"] #clippy-img { animation-duration: 1s; }
+#clippy[data-mood="panic"] #clippy-img { animation: clippy-panic 0.25s linear infinite; }
+@keyframes clippy-bob   { 50% { transform: translateY(-6px); } }
+@keyframes clippy-panic { 25% { transform: translate(-2px, 1px) rotate(-2deg); } 75% { transform: translate(2px, -1px) rotate(2deg); } }
+
+#clippy-bubble {
+  position: absolute;
+  right: 30px;
+  bottom: 132px;
+  width: 300px;
+  padding: 14px 16px 30px; /* extra room at the bottom for the drawn tail */
+  font-size: 13px;
+  line-height: 1.4;
+  pointer-events: auto;
+}
+#clippy-text { white-space: pre-line; }
+#clippy-bubble.pop { animation: bubble-pop 0.2s ease-out; }
+@keyframes bubble-pop { from { transform: scale(0.8); opacity: 0; } }
+
+/* -----------------------------------------------------------------------------
+ *  9. EFFECTS (motion only — no drawing)
+ * -------------------------------------------------------------------------- */
+.highlight-frame {
+  position: absolute;
+  animation: highlight-pulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes highlight-pulse { from { opacity: 1; } to { opacity: 0.3; } }
+
+#screen.shake { animation: shake 0.35s; }
+@keyframes shake {
+  20% { translate: -8px 3px; }
+  40% { translate: 7px -4px; }
+  60% { translate: -5px 2px; }
+  80% { translate: 3px -1px; }
+}
+
+.draggable { touch-action: none; }
+.dragging  { z-index: 1000; opacity: 0.85; }
+
+.flying-envelope { position: absolute; width: 64px; height: 48px; }
+
+/* -----------------------------------------------------------------------------
+ *  10. TITLE SCREEN + BLUE SCREEN  (skins: title-background, bluescreen)
+ * -------------------------------------------------------------------------- */
+#title-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+#title-logo { width: 640px; height: 320px; }
+#start-game { height: 50px; min-width: 210px; font-size: 22px; font-weight: bold; }
+.title-tagline { font-size: 15px; letter-spacing: 0.5px; }
+
+/* Blue screen (built by stages/18-final-bluescreen.js) */
+.bsod {
+  position: absolute;
+  inset: 0;
+  padding: 100px 150px;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+.bsod-face { width: 200px; height: 170px; margin-bottom: 26px; }
+.bsod-text { max-width: 920px; margin: 0 0 26px; font-size: 28px; line-height: 1.35; }
+.bsod-progress { margin: 0 0 40px; font-size: 28px; }
+.bsod-small { font-size: 16px; line-height: 1.7; }
+.bsod-restart { margin-top: 28px; font-size: 18px; animation: blink 1s steps(2) infinite; }
+
+/* -----------------------------------------------------------------------------
+ *  11. CURSORS — our art when it exists, otherwise the normal system cursor
+ * -------------------------------------------------------------------------- */
+#game { cursor: default; }
+#game :is(button, .clickable, .desktop-icon, #clippy-img, .draggable) { cursor: pointer; }
+#game :is(input:not([readonly]), textarea) { cursor: text; }
+#game button:disabled { cursor: default; }
+
+#game.skin-cursor,
+#game.skin-cursor * { cursor: var(--img-cursor) var(--hotspot-cursor), default; }
+#game.skin-cursor :is(input:not([readonly]), textarea) { cursor: text; }
+#game.skin-cursor-hand :is(button, .clickable, .desktop-icon, #clippy-img, .draggable) {
+  cursor: var(--img-cursor-hand) var(--hotspot-cursor-hand), pointer;
+}
+#game.skin-cursor button:disabled { cursor: var(--img-cursor) var(--hotspot-cursor), default; }
+
+/* busy (while the envelope is flying) — keep last so it wins */
+#game.busy, #game.busy * { cursor: progress !important; }
+#game.busy.skin-cursor-loading,
+#game.busy.skin-cursor-loading * { cursor: var(--img-cursor-loading) var(--hotspot-cursor-loading), progress !important; }
+
+/* -----------------------------------------------------------------------------
+ *  12. TEXT COLOURS ONCE THE ART EXISTS
+ *  (#game gets .skin-<name> when <name>.png loaded; until then text stays
+ *   --text so it reads on the light placeholders)
+ * -------------------------------------------------------------------------- */
+#game.skin-titlebar .xp-titlebar             { color: var(--titlebar-text); }
+#game.skin-taskbar #taskbar                  { color: var(--taskbar-text); }
+#game.skin-wallpaper .desktop-icon-label     { color: var(--desktop-text); }
+#game.skin-title-background .title-tagline   { color: var(--title-text); }
+#game.skin-bluescreen .bsod                  { color: var(--bsod-text); }

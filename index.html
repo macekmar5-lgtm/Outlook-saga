@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<!--
+  OUTLOOK SAGA — a "BOUNCE BACK" game jam game.
+  Open this file directly in Chrome, or upload the folder (zipped) to itch.io as an HTML game.
+
+  ART RULE: every visual comes from /assets. Elements with data-skin="file.png" are drawn
+  with that image (9-slice or stretched, see the top of style.css); elements with
+  data-asset="file.png" show it as a picture. Missing files show a dashed placeholder box
+  with the filename, so the artists can see what still needs drawing.
+
+  Layer order inside #screen (bottom -> top):
+    #desktop          wallpaper, desktop icons, windows (incl. the mail window), Clippy, taskbar
+    #layer-highlight  pulsing highlight frames (Game.highlight)
+    #layer-popups     modal dialogs (Game.popup)
+    #layer-fx         the flying envelope and other effects (never clickable)
+    #layer-overlay    full-screen takeovers (blue screen)
+    #title-screen     covers everything until Start is pressed
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Outlook Saga</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game">
+    <div id="screen">
+
+      <!-- ================= DESKTOP ================= -->
+      <div id="desktop">
+        <div id="wallpaper" class="asset" data-asset="wallpaper.png"></div>
+
+        <!-- Desktop icons (Game.addIcon) -->
+        <div id="layer-icons" class="layer"></div>
+
+        <!-- Windows (Game.openWindow). The mail window lives here too. -->
+        <div id="layer-windows" class="layer">
+          <div id="mail-window" class="xp-window" data-skin="window-frame.png">
+            <div class="xp-titlebar" data-skin="titlebar.png">
+              <div class="asset xp-title-icon" data-asset="icon-outlook-saga.png"></div>
+              <span class="xp-title">New Message - Outlook Saga</span>
+              <div class="xp-title-buttons">
+                <button class="xp-tb-btn xp-tb-min" data-skin="btn-minimize.png" title="Minimize"></button>
+                <button class="xp-tb-btn xp-tb-max" data-skin="btn-maximize.png" title="Maximize"></button>
+                <button class="xp-tb-btn xp-tb-close" data-skin="btn-close.png" title="Close"></button>
+              </div>
+            </div>
+
+            <div class="mail-menubar">
+              <span>File</span><span>Edit</span><span>View</span><span>Insert</span>
+              <span>Format</span><span>Tools</span><span>Message</span><span>Help</span>
+            </div>
+
+            <div class="mail-toolbar">
+              <button id="send-btn" class="ui-btn send-btn" data-skin="button.png" data-skin-pressed="button-pressed.png">Send</button>
+              <button class="ui-btn" data-skin="button.png" disabled>Cut</button>
+              <button class="ui-btn" data-skin="button.png" disabled>Copy</button>
+              <button class="ui-btn" data-skin="button.png" disabled>Paste</button>
+              <button class="ui-btn" data-skin="button.png" disabled>Spelling</button>
+            </div>
+
+            <div class="mail-fields">
+              <label for="mail-from">From:</label>
+              <div class="ui-field" data-skin="input-box.png"><input id="mail-from" type="text" readonly></div>
+              <label for="mail-to">To:</label>
+              <div class="ui-field" data-skin="input-box.png"><input id="mail-to" type="text" readonly></div>
+              <label for="mail-subject">Subject:</label>
+              <div class="ui-field" data-skin="input-box.png"><input id="mail-subject" type="text" autocomplete="off" spellcheck="false"></div>
+            </div>
+
+            <div id="mail-attachments" class="mail-attachments empty">
+              <span class="attach-label">Attach:</span>
+              <div id="attach-list"></div>
+            </div>
+
+            <!-- Stages may overlay things on top of the body (e.g. clickable words). -->
+            <div id="mail-body-wrap" class="ui-field multiline" data-skin="input-box.png">
+              <textarea id="mail-body" spellcheck="false"></textarea>
+            </div>
+
+            <div class="mail-statusbar">
+              <span id="char-counter"></span>
+              <span>Outlook Saga 2003 (Unlicensed)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clippy -->
+        <div id="clippy" data-mood="happy">
+          <div id="clippy-bubble" class="hidden" data-skin="clippy-bubble.png">
+            <div id="clippy-text"></div>
+          </div>
+          <div id="clippy-img" class="asset" data-asset="clippy-happy.png" title="Click for a hint (costs 1 minute)"></div>
+        </div>
+
+        <!-- Taskbar -->
+        <div id="taskbar" data-skin="taskbar.png">
+          <button id="start-button" data-skin="start-button.png" aria-label="start"></button>
+          <div id="taskbar-tasks">
+            <button id="task-mail" class="task-button" data-skin="taskbar-button.png">
+              <span class="asset" data-asset="icon-outlook-saga.png" style="width:16px;height:16px"></span>
+              <span>New Message</span>
+            </button>
+          </div>
+          <div id="tray" data-skin="tray.png">
+            <div id="tray-icons"></div>
+            <div id="clock" title="Deadline: 9:00 AM"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= LAYERS ABOVE THE DESKTOP ================= -->
+      <div id="layer-highlight" class="layer"></div>
+      <div id="layer-popups" class="layer"></div>
+      <div id="layer-fx" class="layer"></div>
+      <div id="layer-overlay" class="layer"></div>
+
+      <!-- ================= TITLE SCREEN ================= -->
+      <div id="title-screen" data-skin="title-background.png">
+        <div id="title-logo" class="asset" data-asset="title-logo.png"></div>
+        <button id="start-game" class="ui-btn" data-skin="button.png" data-skin-pressed="button-pressed.png">Start</button>
+        <div class="title-tagline">Send ONE email. How hard can it be?</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SCRIPTS: engine first, then one file per stage. =====
+       A missing stage file just logs a 404 and is skipped. To add a stage,
+       add its <script> tag here (order doesn't matter: stages sort by id). -->
+  <script src="engine.js"></script>
+  <script src="stages/01-no-subject.js"></script>
+  <script src="stages/02-caps-lock.js"></script>
+  <script src="stages/03-too-many-attachments.js"></script>
+  <script src="stages/04-file-too-big.js"></script>
+  <script src="stages/05-character-limit.js"></script>
+  <script src="stages/06-wrong-format.js"></script>
+  <script src="stages/07-keyboard-disconnected.js"></script>
+  <script src="stages/08-zip-folder.js"></script>
+  <script src="stages/09-winrawr.js"></script>
+  <script src="stages/10-autocorrect.js"></script>
+  <script src="stages/11-signature.js"></script>
+  <script src="stages/12-too-emotional.js"></script>
+  <script src="stages/13-battery.js"></script>
+  <script src="stages/14-sent-from-bed.js"></script>
+  <script src="stages/15-boss-blocked.js"></script>
+  <script src="stages/16-captcha.js"></script>
+  <script src="stages/17-no-internet.js"></script>
+  <script src="stages/18-final-bluescreen.js"></script>
+</body>
+</html>
