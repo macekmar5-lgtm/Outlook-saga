@@ -117,12 +117,13 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
   `Game.mailOpen` tracks this; Send does nothing until it's true. `?stage=N` debug jumps skip the
   loading screen and open Outlook immediately.
 - `CONFIG.ERROR_SOUND_LEAD_MS` starts `error.wav` that long before the bounce popup appears.
-- **Send**: "Sending..." bar, envelope flies out and bounces back (`bounce.wav`), Bounced
-  counter +1, costs 1 minute.
+- **Send**: "Sending..." bar, envelope flies out and bounces back (`bounce.wav`, `CONFIG.BOUNCE_MS`),
+  Bounced counter +1, costs 1 minute. Clicks and keys are blocked while it flies (`#game.busy`); the popup only appears
+  after it lands.
   - no active stage → start the first stage
-  - active stage, `check()` fails → "Mail Delivery Bounced (again)" popup + annoyed Clippy
+  - active stage, `check()` fails → "Mail Delivery Bounced (again) - Bounce #N" popup + annoyed Clippy
   - `check()` passes → `cleanup()` + tracked cleanups → start next stage
-- **Starting a stage**: `setup()`, then the "Mail Delivery Bounced" popup (`error.wav`) with
+- **Starting a stage**: `setup()`, then the "Mail Delivery Bounced - Bounce #N" popup (`error.wav`) with
   `error`, and Clippy says `clippy` in mood `vibe`.
 - `todo: true` stage = stub: popup adds "[stage not built yet]" and the next Send auto-passes.
 - If `setup()` throws, the stage is treated like a stub. If `check()` throws, it passes.
@@ -150,7 +151,7 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
 | 4 | cat.jpg is 3 MB |
 | 5 | body trimmed by the player (Clippy's paragraph partly remains) |
 | 6 | cat.jpg → cat.png |
-| 7 | new subject typed on the on-screen keyboard |
+| 7 | subject = the 3-word recovery phrase (found in My Computer, typed on the on-screen keyboard) |
 | 8 | all attachments → one "New Folder.zip" |
 | 10 | "sorry"s removed from the body |
 | 11 | "[signature.png]" appended to the body |
@@ -210,7 +211,7 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 | Surfaces | `setSkin(el, file)`, `skin.has('window-frame')`, attribute `data-skin` / `data-skin-pressed` |
 | UI kit | `ui.button(label, onClick, {skin, pressed, className})`, `ui.input({value, placeholder, type, multiline, skin})` → wrapper (`.input`), `ui.checkbox(label, checked, onChange, {readOnly})` (`.checked`, `.setChecked(v)`), `ui.progress(v)` (`.set(0..1)`), `ui.key(label, onClick)` |
 | Progress | `runProgress(bar, ms, steps, labelEl)` → Promise (fills a `ui.progress` bar, shows step texts) |
-| Sound | `sound(file, volume)` — from assets/sounds/, silent if missing |
+| Sound | `sound(file, volume, rate)` — from assets/sounds/, silent if missing; rate = playbackRate (higher = higher pitch) |
 | Popup | `popup({title, text, html, icon, buttons:[{label, onClick(p) → false keeps open}], modal, closable, onClose, skin})` → `{el, close}`. icon: `'error' \| 'warning' \| 'info'` (= icon-*.png) or a filename. Draggable |
 | Windows | `openWindow({title, html, x, y, w, h, closable, icon, skin, className, onClose, persist})` → `{el, body, close, setTitle}`; `bringToFront(el)`; `makeMovable(el, handle)`. All windows/popups drag by their title bar |
 | Apps | `openApp({id, ...openWindow options})` — one window per `id`; `.created` is true only the first time |
@@ -218,11 +219,12 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 | Tray | `tray.add(id, label, onClick, {icon, text, title, persist})` (icon defaults to `tray-<id>.png`), `tray.setIcon(id, file)`, `tray.setText(id, text)`, `tray.get(id)`, `tray.remove(id)`. Built-in: `wifi`, `volume`, `battery` |
 | Drag | `dragGhost(el, {onDrop(point, el), onStart, canDrag, persist})` — drags a copy on the top layer (visible above windows); `makeDraggable(el, {onDrop, revert, …})` moves the element itself (stays in its layer); `hitTest(el, point, pad)` (pad = extra px of hitbox around the target); `overlaps(a, b, minPx)` |
 | Coords | `toGame(event)` or `toGame(clientX, clientY)` → game px; `rectOf(el)` → `{x, y, w, h}` in game px |
-| Juice | `highlight(selOrEl, ms)` (pulsing highlight-frame.png; 0 = until stage end) → off(); `shake()`; `blackout(text, ms)` → Promise (black screen + text) |
+| Juice | `highlight(selOrEl, ms)` (pulsing highlight-frame.png; 0 = until stage end) → off(); `shake(strength)` (1 = normal, 0.5 light, 2 strong); `blackout(text, ms)` → Promise (black screen + text) |
 | Flow | `restartStage()` (cleanup + setup again, no popup), `send()`, `restart()` |
 | Clippy | `clippy.say(text, mood)`, `clippy.hide()`, `clippy.mood` |
 | Text | `line('key', vars)` (current stage's `lines`), `line('general.x.y', vars)` (any path); stage fields `textVars`, `lines` (fallbacks if clippy-lines.js has no entry) |
 | Clock | `clock.add(min)`, `clock.minutes`, `clock.minutesLeft`, `clock.start/stop/freeze/disableDeadline()` |
+| Stats | `Game.stats` = `{ bounces, rewrites, charsTyped, charsDeleted, startTime, endTime, hintsUsed }` for the whole run. rewrites = sends where To/Subject/body/attachments changed since the previous send; chars = real typing in subject/body (+ `ui.key` presses; text set from code doesn't count). Live in the statusbar (`#bounce-meter`: "Bounces: 7 · Rewrites: 5"). `Game.showStats()` = end screen on bluescreen-bg.png (stage 18 calls it after the blue screen), saves the best run (fewest bounces, then fastest) in localStorage `outlook-saga-best-run` — only full runs from the title screen |
 | Run timer | `timer.ms / text / start() / stop() / format(ms)`, `timer.best`, `timer.saveBest()` (true = new record; only full runs from the title screen count). Real time, shown in the taskbar next to the clock; starts when Outlook opens, stops on delivered/fired |
 | Cleanup | `track(fn)`, `on(target, type, fn, opts)`, `timeout(fn, ms)`, `interval(fn, ms)` |
 | Misc | `state` {}, `stage`, `stages`, `stageIndex`, `over`, `bounces`, `layers.{icons,windows,highlight,popups,fx,overlay}`, `make(tag, cls, text)`, `CONFIG` |
@@ -232,6 +234,7 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 - Open `index.html` in Chrome. F12 console shows stage starts/passes and which art is missing.
 - `index.html?stage=7` — skip the title, start directly at stage 7.
   `&nodeadline=1` — 9:00 never fires you. `&freeze` — the clock doesn't move at all.
-- Console: `Game.debug.list()`, `Game.debug.skip()`, `Game.debug.goto(12)`, `Game.debug.missing()`.
+- Console: `Game.debug.list()`, `Game.debug.skip()`, `Game.debug.goto(12)`, `Game.debug.missing()`,
+  `Game.debug.stats()` (end screen now).
 - No test framework. Verify by playing: fail the stage once, fix it, pass it, and check the
   next stage doesn't inherit leftovers. README.md has a per-stage test checklist.

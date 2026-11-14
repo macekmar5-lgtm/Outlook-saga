@@ -11,7 +11,11 @@
  *  STATE FLOW
  *    cat.jpg stays attached for stage 4 (compress), 6 (convert) and 8 (zip).
  *
+ *    Optional: click the Recycle Bin to see what you threw away and EMPTY it
+ *    (confirm popup; the bin goes back to trash-empty.png).
+ *
  *  ASSETS: file-photo.png, file-doc.png, file-exe.png, trash-empty.png, trash-full.png
+ *  SOUND:  sounds/empty-bin.wav (emptying the bin)
  * ========================================================================== */
 
 (function () {
@@ -36,8 +40,50 @@
       G.attachments.clear();
       FILES.forEach((f) => G.attachments.add(f[0], f[1], f[2]));
 
-      const bin = G.addIcon({ id: 'trash', label: 'Recycle Bin', asset: 'trash-empty.png', x: 16, y: 470 });
+      // Click the Recycle Bin: a window with what you threw away + "Empty Recycle Bin".
+      const trashed = []; // [{ name, size, icon }]
+      let binWin = null;
+      const bin = G.addIcon({
+        id: 'trash', label: 'Recycle Bin', asset: 'trash-empty.png', x: 16, y: 470,
+        onClick: () => openBin(),
+      });
       const binImg = bin.querySelector('.desktop-icon-img');
+
+      function emptyBin() {
+        trashed.length = 0;
+        G.setAsset(binImg, 'trash-empty.png');
+        G.sound('empty-bin.wav');
+        G.clippy.say(G.line('binEmptied'), 'happy');
+        renderBin();
+      }
+      function renderBin() {
+        if (!binWin || !binWin.el.isConnected) return;
+        binWin.body.replaceChildren();
+        const list = G.make('div', 'bin-list');
+        if (!trashed.length) list.appendChild(G.make('div', 'stage-note', 'The Recycle Bin is empty.'));
+        trashed.forEach((f) => {
+          const row = G.make('div', 'bin-item');
+          row.append(G.asset(f.icon, { w: 24, h: 24 }), G.make('span', 'bin-name', f.name), G.make('span', 'bin-size', f.size));
+          list.appendChild(row);
+        });
+        const empty = G.ui.button('Empty Recycle Bin', () => {
+          G.popup({
+            title: 'Confirm Multiple File Delete',
+            icon: 'warning',
+            text: trashed.length === 1
+              ? `Are you sure you want to permanently delete '${trashed[0].name}'?`
+              : `Are you sure you want to permanently delete these ${trashed.length} items?`,
+            buttons: [{ label: 'Yes', onClick: emptyBin }, { label: 'No' }],
+          });
+        });
+        empty.disabled = !trashed.length;
+        binWin.body.append(list, empty);
+      }
+      function openBin() {
+        binWin = G.openApp({ id: 'recycle-bin', title: 'Recycle Bin', icon: 'trash-full.png', x: 130, y: 330, w: 380, h: 290 });
+        G.setAsset(binWin.el.querySelector('.xp-title-icon'), trashed.length ? 'trash-full.png' : 'trash-empty.png');
+        renderBin();
+      }
 
       G.dragAttachments((att, point) => {
         if (!G.hitTest(bin, point)) return; // dropped somewhere else: chip stays in the email
@@ -46,10 +92,12 @@
           G.clippy.say(G.line('notTheCat'), 'annoyed');
           return; // the cat bounces back into the email
         }
+        trashed.push({ name: att.name, size: att.size, icon: att.icon });
         G.attachments.remove(att.name);
         G.setAsset(binImg, 'trash-full.png');
         G.sound('bounce.wav', 0.4);
         if (att.name === EXE) G.clippy.say(G.line('exeGone'), 'happy');
+        renderBin();
       });
 
       G.timeout(() => G.highlight(bin, 3000), 600);

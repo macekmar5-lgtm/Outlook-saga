@@ -92,6 +92,16 @@ const Game = {
   started: false,   // true once the player pressed Start on the title screen
   over: false,      // true after being fired or reaching the final stage
   bounces: 0,       // how many times the email bounced (shown on the Bounced folder)
+  // Bounce-back tracker for the whole run (shown in the statusbar and on the end screen):
+  stats: {
+    bounces: 0,      // failed sends (same as Game.bounces)
+    rewrites: 0,     // sends where To/Subject/body/attachments changed since the previous send
+    charsTyped: 0,   // characters typed into subject + body (incl. stage 7's on-screen keyboard)
+    charsDeleted: 0, // characters deleted from subject + body
+    startTime: null, // Date.now() when Outlook opened (the run timer started)
+    endTime: null,   // Date.now() when delivered / fired
+    hintsUsed: 0,    // Clippy hint clicks
+  },
   mailOpen: false,  // the Outlook Saga window is closed at boot; the player opens it from the desktop
   scale: 1,         // current screen scale factor (set by fit())
   layers: {},       // DOM layers: icons, windows, highlight, popups, fx, overlay (filled by init)
@@ -497,7 +507,11 @@ window.Game = Game;
 
     /** Game.ui.key('Q', onClick) — an on-screen keyboard key (key.png / key-pressed.png) */
     key(label, onClick) {
-      return Game.ui.button(label, onClick, { skin: 'key.png', pressed: 'key-pressed.png', className: 'ui-key' });
+      const press = () => {
+        keyTyping = true; // mail.subject/body changes made by this click count as typing (Game.stats)
+        try { if (onClick) onClick(); } finally { keyTyping = false; }
+      };
+      return Game.ui.button(label, press, { skin: 'key.png', pressed: 'key-pressed.png', className: 'ui-key' });
     },
   };
 
@@ -531,11 +545,12 @@ window.Game = Game;
   };
 
   /**
-   * Game.sound('bounce.wav', volume = 1)
+   * Game.sound('bounce.wav', volume = 1, rate = 1)
    * Plays assets/sounds/<file>. Missing files silently do nothing.
+   * rate = playbackRate: 1.2 plays it faster AND higher (pitch is not preserved).
    */
   const sounds = {}; // file -> Audio element, or false if known to be missing
-  Game.sound = function (file, volume) {
+  Game.sound = function (file, volume, rate) {
     if (sounds[file] === false) return;
     let base = sounds[file];
     if (!base) {
@@ -546,6 +561,8 @@ window.Game = Game;
     // If the sound is already playing, play an overlapping copy.
     const audio = base.paused ? base : base.cloneNode();
     audio.volume = clamp((volume == null ? 1 : volume) * CONFIG.MASTER_VOLUME, 0, 1);
+    audio.preservesPitch = false;
+    audio.playbackRate = rate || 1;
     try { audio.currentTime = 0; } catch (e) { /* not loaded yet — fine */ }
     const p = audio.play();
     if (p && p.catch) p.catch(() => {}); // missing file / autoplay block: stay silent
@@ -1124,8 +1141,9 @@ window.Game = Game;
     return off;
   };
 
-  /** Shake the whole screen. */
-  Game.shake = function () {
+  /** Shake the whole screen. Game.shake(strength = 1): 0.5 = light, 2 = strong. */
+  Game.shake = function (strength) {
+    screen.style.setProperty('--shake', strength || 1);
     screen.classList.remove('shake');
     void screen.offsetWidth; // restart the CSS animation
     screen.classList.add('shake');
@@ -1196,6 +1214,7 @@ window.Game = Game;
     }
     const cost = CONFIG.HINT_COST_MINUTES;
     Game.clippy.say(Game.line('general.hint', { hint: stage.hint, minutes: cost }));
+    Game.stats.hintsUsed++;
     Game.clock.add(cost);
   }
 
@@ -1203,6 +1222,30 @@ window.Game = Game;
    *  8. MAIL
    * ======================================================================== */
   let charLimit = null;
+
+  /* ---- Bounce-back tracker: typed / deleted characters (Game.stats) ----
+   * Real typing in the subject/body is measured per input event (old text vs new
+   * text, so select-and-replace counts both). Text set from code (mail.subject = ...)
+   * does NOT count, except while an on-screen key (Game.ui.key) is being pressed. */
+  let keyTyping = false;
+  function countEdit(before, after) {
+    if (before === after) return;
+    const max = Math.min(before.length, after.length);
+    let p = 0;
+    while (p < max && before[p] === after[p]) p++;
+    let s = 0;
+    while (s < max - p && before[before.length - 1 - s] === after[after.length - 1 - s]) s++;
+    Game.stats.charsDeleted += before.length - p - s;
+    Game.stats.charsTyped += after.length - p - s;
+  }
+  function trackTyping(field) {
+    let base = field.value;
+    field.addEventListener('beforeinput', () => { base = field.value; });
+    field.addEventListener('input', () => {
+      // read the text after every other input listener ran (e.g. stage 2 forces CAPS)
+      setTimeout(() => { countEdit(base, field.value); base = field.value; }, 0);
+    });
+  }
 
   Game.mail = {
     /** Raw elements: window, from, to, subject, body, bodyWrap, counter, send, attachBar, attachList, status */
@@ -1218,11 +1261,13 @@ window.Game = Game;
     set to(v) { this.el.to.value = v; },
     get subject() { return this.el.subject.value; },
     set subject(v) {
+      if (keyTyping) countEdit(this.el.subject.value, v);
       this.el.subject.value = v;
       checkEasterEggs(); // e.g. typed on stage 7's on-screen keyboard
     },
     get body() { return this.el.body.value; },
     set body(v) {
+      if (keyTyping) countEdit(this.el.body.value, v);
       this.el.body.value = v;
       Game.mail.updateCounter();
     },
@@ -1395,6 +1440,9 @@ window.Game = Game;
   function renderBounces() {
     const el = $('#bounce-count');
     if (el) el.textContent = Game.bounces;
+    // Bounce-back meter in the statusbar (text only, on statusbar.png)
+    const meter = $('#bounce-meter');
+    if (meter) meter.textContent = `Bounces: ${Game.stats.bounces} · Rewrites: ${Game.stats.rewrites}`;
   }
 
   let sendBar = null;
@@ -1483,11 +1531,13 @@ window.Game = Game;
     start() {
       if (runStart) return;
       runStart = performance.now();
+      Game.stats.startTime = Date.now();
       runTimerTick = setInterval(renderRunTimer, 100);
     },
     stop() {
       if (!runStart || runEnd) return;
       runEnd = performance.now();
+      Game.stats.endTime = Date.now();
       clearInterval(runTimerTick);
       renderRunTimer();
     },
@@ -1571,8 +1621,11 @@ window.Game = Game;
     return MOODS[clamp(Math.floor(t * MOODS.length), 0, MOODS.length - 1)];
   }
 
-  /** The envelope flies out of the Send button; bounces back unless delivered. */
-  function flyEnvelope(bounceBack) {
+  /**
+   * The envelope flies out of the Send button; bounces back unless delivered.
+   * onLand() runs at the SPLAT moment (the bounce is counted there).
+   */
+  function flyEnvelope(bounceBack, onLand) {
     return new Promise((resolve) => {
       const r = Game.rectOf(Game.mail.el.send);
       const sx = r.x + r.w / 2 - 32;
@@ -1607,9 +1660,8 @@ window.Game = Game;
         setTimeout(() => {
           Game.sound('bounce.wav');
           Game.shake();
-          Game.bounces++;
-          renderBounces();
           Game.mail.status = 'Bounced. Obviously.';
+          if (onLand) onLand();
         }, duration * 0.72);
       }
       anim.onfinish = () => {
@@ -1627,10 +1679,15 @@ window.Game = Game;
     if (!Game.started || !Game.mailOpen || Game.over || sending || screen.classList.contains('blackout')) return;
     sending = true;
     slowIdleMs = 0;
-    root.classList.add('busy');
+    root.classList.add('busy'); // CSS: busy cursor + no clicks on the screen while the envelope flies
+    window.addEventListener('keydown', blockKeysWhileFlying, true);
     Game.sound('send.wav');
     const statusBefore = Game.mail.status === 'Bounced. Obviously.' ? CONFIG.STATUS_TEXT : Game.mail.status;
     Game.mail.status = 'Sending...';
+
+    // Bounce-back tracker: did the player change the email since the last send?
+    if (lastSentSnapshot !== null && emailSnapshot() !== lastSentSnapshot) Game.stats.rewrites++;
+    renderBounces();
 
     // Decide the outcome BEFORE animating, so we know if the envelope bounces.
     const outcome = Game.stage ? runCheck(Game.stage) : { pass: true }; // no stage yet -> start stage 1
@@ -1644,21 +1701,44 @@ window.Game = Game;
       errorSoundQueued = true;
       setTimeout(() => Game.sound('error.wav'), Math.max(0, CONFIG.BOUNCE_MS - CONFIG.ERROR_SOUND_LEAD_MS));
     }
-    if (!Game.over) await flyEnvelope(!delivered);
+    if (!Game.over) {
+      await flyEnvelope(!delivered, () => {
+        Game.bounces++;
+        Game.stats.bounces = Game.bounces;
+        renderBounces();
+      });
+    }
 
     sending = false;
     root.classList.remove('busy');
+    window.removeEventListener('keydown', blockKeysWhileFlying, true);
     if (Game.mail.status === 'Sending...' || Game.mail.status === 'Bounced. Obviously.') Game.mail.status = statusBefore;
     if (Game.over) return; // fired while the envelope was in the air
 
-    if (!outcome.pass) {
-      stillFailed(outcome.reason);
-      return;
+    if (!outcome.pass) stillFailed(outcome.reason);
+    else {
+      finishStage();
+      startStage(nextIndex);
     }
-    finishStage();
-    startStage(nextIndex);
+    lastSentSnapshot = emailSnapshot(); // the next stage may have changed the email: that's not a rewrite
   }
   Game.send = send;
+
+  function blockKeysWhileFlying(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  /* ---- Bounce-back tracker: rewrites ----
+   * One rewrite per send when To / Subject / body / attachments differ from how the
+   * email looked right after the previous send (or when Outlook was opened). */
+  let lastSentSnapshot = null;
+  function emailSnapshot() {
+    const m = Game.mail;
+    return JSON.stringify([m.to, m.subject, m.body, Game.attachments.list().map((a) => a.name + '|' + a.size)]);
+  }
+  /** " - Bounce #7" for the error popup titles (nothing before the first bounce, e.g. ?stage=N). */
+  const bounceTag = () => (Game.bounces ? ` - Bounce #${Game.bounces}` : '');
 
   /* ---- SUBMIT button: sometimes asks "Are you sure?" first (CONFIG.CONFIRM_CHANCE) ----
    * Only the button does this; Game.send() from stage code always sends straight away.
@@ -1782,7 +1862,7 @@ window.Game = Game;
     const stub = stage.todo || stage._broken;
     playErrorSound();
     Game.popup({
-      title: 'Mail Delivery Bounced',
+      title: 'Mail Delivery Bounced' + bounceTag(),
       icon: 'error',
       text:
         `Your message to ${Game.mail.to} could not be delivered.\n\n` +
@@ -1802,7 +1882,7 @@ window.Game = Game;
     const stage = Game.stage;
     playErrorSound();
     Game.popup({
-      title: 'Mail Delivery Bounced (again)',
+      title: 'Mail Delivery Bounced (again)' + bounceTag(),
       icon: 'warning',
       text: `Your message bounced. Again.\n\nReason: ${reason || stage.error}`,
     });
@@ -1848,6 +1928,64 @@ window.Game = Game;
     });
   }
 
+  /* ---- END SCREEN: the bounce-back stats (shown by stage 18 after the blue screen) ----
+   * Game.showStats() puts a full-screen page on bluescreen-bg.png (white text, blue screen
+   * style) with Game.stats, the best run (fewest bounces, then fastest; saved in this
+   * browser, only full runs from the title screen count) and "Press any key to try again." */
+  const BEST_RUN_KEY = 'outlook-saga-best-run';
+  function loadBestRun() {
+    try {
+      const v = JSON.parse(localStorage.getItem(BEST_RUN_KEY));
+      return v && v.bounces >= 0 && v.ms > 0 ? v : null;
+    } catch (e) { return null; }
+  }
+  function saveBestRun(run) {
+    try { localStorage.setItem(BEST_RUN_KEY, JSON.stringify(run)); } catch (e) { /* private mode: no record */ }
+  }
+  const mmss = (ms) => {
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+
+  Game.showStats = function () {
+    const st = Game.stats;
+    const ms = st.startTime && st.endTime ? st.endTime - st.startTime : Game.timer.ms;
+    const run = { bounces: st.bounces, ms: Math.round(ms) };
+    const best = loadBestRun();
+    const isRecord = Game.timer.fullRun &&
+      (!best || run.bounces < best.bounces || (run.bounces === best.bounces && run.ms < best.ms));
+    if (isRecord) saveBestRun(run);
+    const shown = isRecord ? run : best;
+    const times = (n) => `${n} TIME${n === 1 ? '' : 'S'}`;
+
+    const page = make('div', 'bsod stats-screen');
+    Game.setSkin(page, 'bluescreen-bg.png');
+    const add = (cls, text) => { const el = make('div', cls, text); page.appendChild(el); return el; };
+    add('stats-headline', `YOUR EMAIL BOUNCED BACK ${times(st.bounces)}.\nYOU BOUNCED BACK ${times(st.bounces)}.`);
+    add('stats-list', [
+      `Rewrites: ${st.rewrites}`,
+      `Characters typed: ${st.charsTyped}`,
+      `Characters deleted: ${st.charsDeleted}`,
+      `Time: ${mmss(ms)} (real time)`,
+      `Clippy hints used: ${st.hintsUsed}`,
+      `Final clock: ${Game.clock.format(Game.clock.minutes)}`,
+    ].join('\n'));
+    const bestLine = add('stats-best',
+      shown ? `Best: ${shown.bounces} bounces, ${mmss(shown.ms)}` : 'Best: -');
+    if (isRecord) bestLine.appendChild(make('span', 'stats-record', 'NEW RECORD'));
+    if (!Game.timer.fullRun) add('stats-note', '(test run: started with ?stage= or a debug jump, so it does not count)');
+    add('stats-restart', 'Press any key to try again.');
+    Game.layers.overlay.appendChild(page);
+
+    // any key / click -> fresh game (after a short pause so a held key doesn't skip it)
+    setTimeout(() => {
+      const restart = () => Game.restart();
+      window.addEventListener('keydown', restart, { once: true });
+      page.addEventListener('pointerdown', restart, { once: true });
+    }, 900);
+    return page;
+  };
+
   /** Back to the title screen with a completely fresh state. */
   Game.restart = function () {
     location.reload();
@@ -1888,6 +2026,12 @@ window.Game = Game;
     },
     missing() {
       return Array.from(missingAssets).sort();
+    },
+    /** Show the end-of-run stats screen right now. */
+    stats() {
+      if (!Game.started) startGame(true);
+      Game.timer.stop();
+      Game.showStats();
     },
   };
 
@@ -1984,6 +2128,7 @@ window.Game = Game;
     Game.clock.start();
     fullRun = !quiet;
     Game.timer.start();
+    lastSentSnapshot = emailSnapshot(); // rewrites are counted from here
     if (!quiet) Game.clippy.say(Game.line('general.greeting'), 'happy');
   }
   Game.openMail = openMail;
@@ -2041,6 +2186,8 @@ window.Game = Game;
     m.status.textContent = CONFIG.STATUS_TEXT;
     m.body.addEventListener('input', Game.mail.updateCounter);
     m.subject.addEventListener('input', checkEasterEggs);
+    trackTyping(m.subject); // Game.stats.charsTyped / charsDeleted
+    trackTyping(m.body);
     m.send.addEventListener('click', onSendClick);
     let lastNudgeTick = performance.now();
     setInterval(() => {

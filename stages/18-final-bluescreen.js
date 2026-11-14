@@ -8,7 +8,8 @@
  *    ("PC LOAD LETTER."). Close it, Clippy says he'll "optimize one
  *    tiny thing", and a moment later the whole screen turns into a fake blue
  *    screen (":(" style) with the stop code BOUNCE_BACK_EXCEPTION. After a few
- *    seconds, any key (or click) restarts the game. The end.
+ *    seconds the bounce-back STATS screen appears (engine: Game.showStats);
+ *    any key (or click) there restarts the game. The end.
  *
  *  NOTES
  *    `final: true` tells the engine: no bounce, no error popup, the clock
@@ -25,7 +26,7 @@
   const DELIVERED_MS = 2200;   // how long "delivered" shows before the crash
                                // (brief says ~1 second; a bit longer lets Clippy's line land)
   const PROGRESS_MS = 3500;    // how long the "% complete" counter takes to reach 100
-  const RESTART_AFTER_MS = 4000; // "press any key" appears after this long
+  const RESTART_AFTER_MS = 4000; // the stats screen appears this long after the blue screen
   const REPLY_FLY_MS = 1100;   // the printer's reply envelope flying in to the Inbox
   const OPTIMIZE_MS = 1800;    // after closing the reply: Clippy "optimizes" for this long, then the crash
 
@@ -74,7 +75,6 @@
         What failed: clippy_optimizer.sys<br>
         <span class="bsod-time"></span>
       </div>
-      <div class="bsod-restart hidden">Press any key to restart</div>
     `;
     G.layers.overlay.appendChild(bsod);
     G.setAsset(bsod.querySelector('.bsod-face'), 'bluescreen-face.png');
@@ -89,13 +89,9 @@
       if (p < 100) requestAnimationFrame(tick);
     })(started);
 
-    // After a few seconds, any key or click restarts.
-    setTimeout(() => {
-      bsod.querySelector('.bsod-restart').classList.remove('hidden');
-      const restart = () => G.restart();
-      window.addEventListener('keydown', restart, { once: true });
-      bsod.addEventListener('pointerdown', restart, { once: true });
-    }, RESTART_AFTER_MS);
+    // After a few seconds: the bounce-back stats screen (engine: Game.showStats).
+    // Any key there starts a fresh game.
+    setTimeout(() => G.showStats(), RESTART_AFTER_MS);
   }
 
   Game.registerStage({
@@ -108,11 +104,8 @@
 
     setup(G) {
       const stage = this;
-      // Run timer (stopped by the engine when this stage starts) + best time in this browser
-      const isRecord = G.timer.saveBest();
-      const best = G.timer.best;
-      G.state.timeLine = `Your time: ${G.timer.text}` +
-        (isRecord ? '  (NEW BEST!)' : best ? `  (best: ${G.timer.format(best)})` : '');
+      // Run timer (stopped by the engine when this stage starts). The best run is on the stats screen.
+      G.state.timeLine = `Your time: ${G.timer.text}`;
       const delivered = G.popup({
         title: 'Outlook Saga',
         icon: 'info',
@@ -125,7 +118,7 @@
       setTimeout(() => {
         delivered.close();
         flyReplyIn(G).then(() => {
-          G.sound('new-mail.wav');
+          G.sound('new-mail.mp3');
           const inbox = document.querySelector('[data-folder="inbox"] span:last-child');
           if (inbox) inbox.textContent = 'Inbox (1)';
           const stopGlow = G.highlight('[data-folder="inbox"]', 0);

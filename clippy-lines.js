@@ -147,7 +147,8 @@ Game.lines = {
       ],
       "lines": {
         "notTheCat": "Not the cat. Never the cat.",
-        "exeGone": "Bye bye, \"definitely not a virus\". You will not be missed."
+        "exeGone": "Bye bye, \"definitely not a virus\". You will not be missed.",
+        "binEmptied": "Gone forever. Well, until the next stage. Nice and tidy."
       }
     },
 
@@ -191,12 +192,19 @@ Game.lines = {
 
     "7": {
       "error": "Keyboard disconnected.",
-      "clippy": "Your keyboard got disconnected. Don't worry, I built you a new, better one.",
-      "hint": "Your real keyboard is dead. Click letters on the on-screen keyboard to type a subject (3+ characters). The keys move. That is a feature.",
+      "clippy": "Your keyboard got disconnected. Don't worry, I built you a new, better one. To reconnect, the subject has to be your 3-word keyboard recovery phrase. You saved it in a file on My Computer. Somewhere.",
+      "hint": "Open My Computer (top left of the desktop) and find \"keyboard recovery phrase.txt\" in {path}. Then type its 3 words as the subject with the on-screen keyboard (Space between them).",
       "retry": [
         "I can hear you typing. It is not working. Use. The. Keyboard. Window.",
-        "Three letters. You can do three letters. Probably."
-      ]
+        "Three words. From the file. In My Computer. You can do three words. Probably."
+      ],
+      "lines": {
+        "openMyComputer": "The recovery phrase is in My Computer. Top left of the desktop. The icon that looks like a computer. Because it is My Computer.",
+        "foundPhrase": "THAT's the one. Now type it. With my keyboard. It reshuffles after every key. You're welcome.",
+        "openExe": "No. We are not running that. I have seen your Downloads folder.",
+        "openDll": "Don't touch that. Nobody knows what it does. Not even Windows.",
+        "openImg": "It's a picture. Not a recovery phrase. Keep looking."
+      }
     },
 
     "8": {

@@ -45,7 +45,7 @@ Open each link (from the project folder), fail the stage once by pressing SUBMIT
 | 4 | `index.html?stage=4&nodeadline=1` | Click the **cat.jpg** chip → preview → **drag the hydraulic press down** onto the cat (size shrinks live). Let go halfway once: it springs back. Push all the way down → flat cat, 3 MB. |
 | 5 | `index.html?stage=5&nodeadline=1` | Body is ~1400 chars, counter red. Delete text until it's 20–500 characters. |
 | 6 | `index.html?stage=6&nodeadline=1` | **Double-click** "Convertinator 3000" (top right) → drag the **cat.jpg** chip into the drop zone → wait → it becomes cat.png. |
-| 7 | `index.html?stage=7&nodeadline=1` | Real keyboard does nothing. Click 3+ keys on the **on-screen keyboard** (keys swap every 5 presses). |
+| 7 | `index.html?stage=7&nodeadline=1` | Real keyboard does nothing. Open **My Computer** (desktop, top left): a big fake file system. Find `keyboard recovery phrase.txt` (random deep folder each game; click Clippy for the folder; ignore the OLD / Copy / .txt.exe decoys). Type its **3 words** as the subject on the **on-screen keyboard** (all letters reshuffle after every press). Wrong words fail ("1 of 3 words right"). |
 | 8 | `index.html?stage=8&nodeadline=1` | Drag every chip onto **New Folder.zip** (bottom left), then drag the zip icon into the mail window. |
 | 9 | `index.html?stage=9&nodeadline=1` | Ignore the fleeing "Buy license". Click **Continue trial**, wait for the sad nag, click **Continue trial** again. |
 | 10 | `index.html?stage=10&nodeadline=1` | Click every red **sorry** in the body; every 3rd becomes **apologies**: click those too. |
@@ -172,7 +172,7 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 - 3: [x] `file-photo.png`, [x] `file-doc.png`, [x] `file-exe.png` (20×20), [x] `trash-empty.png`, [x] `trash-full.png` (48×48)
 - 4: [x] `cat.png` (~300×180; squished live by the press), [ ] `press.png` (hydraulic press head/plate, ~240×90; its BOTTOM edge touches the cat)
 - 6: [ ] `icon-converter.png` (48×48), [ ] `drop-zone.png` (9-slice, ~300×110)
-- 7: `keyboard-frame.png`, `key.png`, `key-pressed.png`, `tray-keyboard-off.png` (above)
+- 7: `keyboard-frame.png`, `key.png`, `key-pressed.png`, `tray-keyboard-off.png` (above); the My Computer file browser reuses `icon-my-computer.png`, `icon-folder.png`, `file-doc.png`, `file-exe.png`, `file-photo.png`
 - 8: [ ] `icon-zip.png` (48×48)
 - 9: [ ] `winrawr-logo.png` (100×100)
 - 11: [ ] `signature-pad.png` (480×200)
@@ -191,7 +191,8 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 - [x] `fan.wav`: PC fan, loops the whole game; loud when you press Start, then fades to a quiet hum (`FAN_*` in CONFIG)
 - [x] `compressing.mp3`: stage 4, plays when the hydraulic press squishes the cat all the way flat
 - [ ] `easter-egg.wav`: typing "hack club" / "game jam" in the subject (achievement popup)
-- [ ] `new-mail.wav`: stage 18, the printer's reply lands in the Inbox
+- [x] `new-mail.mp3`: stage 18, the printer's reply lands in the Inbox
+- [ ] `empty-bin.wav`: stage 3, emptying the Recycle Bin
 - Clippy has **no** sound (on purpose), so `clippy.wav` isn't used.
 
 ---
