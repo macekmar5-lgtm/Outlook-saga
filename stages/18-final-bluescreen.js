@@ -72,9 +72,7 @@
     name: 'Delivered (blue screen)',
     final: true,
     vibe: 'happy',
-    error: '',
-    clippy: 'Finally! Let me just optimize one tiny thing...',
-    hint: '',
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "18"
     assets: ['bluescreen-bg.png', 'bluescreen-face.png'],
 
     setup(G) {

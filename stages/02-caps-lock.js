@@ -16,13 +16,7 @@ Game.registerStage({
   id: 2,
   name: 'Caps Lock stuck',
   vibe: 'happy',
-  error: 'Subject line is in ALL CAPS. Recipient feels yelled at.',
-  clippy: "Whoa, easy there! The printer thinks you're yelling. Is your Caps Lock stuck? It happens to the best of us!",
-  hint: 'Click the Caps Lock icon in the taskbar tray (bottom right, next to the clock) to turn it off. Then retype the subject.',
-  retry: [
-    'STILL SHOUTING. Sorry. I mean: still shouting.',
-    'Caps Lock lives in the tray. Bottom right. Next to the clock. :)',
-  ],
+  // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "2"
   assets: ['tray-caps.png', 'tray-caps-on.png'],
 
   setup(G) {
@@ -48,7 +42,7 @@ Game.registerStage({
     G.tray.add('caps', 'Caps Lock', () => {
       G.state.capsLock = !G.state.capsLock;
       showState();
-      if (!G.state.capsLock) G.clippy.say('Caps Lock is off! Now retype the subject in normal letters.', 'happy');
+      if (!G.state.capsLock) G.clippy.say(G.line('capsOff'), 'happy');
     });
     showState();
   },

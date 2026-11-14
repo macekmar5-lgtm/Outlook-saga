@@ -16,13 +16,7 @@ Game.registerStage({
   id: 1,
   name: 'No subject',
   vibe: 'happy',
-  error: 'Email does not have a subject.',
-  clippy: "Hi there! It looks like you're writing an email without a subject. Would you like help with that? :)",
-  hint: 'Click the Subject field at the top of the email and type anything. Literally anything.',
-  retry: [
-    'The subject is the little box that says "Subject". I know. Tricky.',
-    "Still no subject! That's okay. Everyone learns at their own pace. :)",
-  ],
+  // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "1"
   assets: [],
 
   setup(G) {

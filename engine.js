@@ -81,6 +81,7 @@ const Game = {
   bounces: 0,       // how many times the email bounced (shown on the Bounced folder)
   scale: 1,         // current screen scale factor (set by fit())
   layers: {},       // DOM layers: icons, windows, highlight, popups, fx, overlay (filled by init)
+  lines: {},        // ALL texts (Clippy, errors, hints) — filled by clippy-lines.js
 };
 window.Game = Game;
 
@@ -109,10 +110,14 @@ window.Game = Game;
   const STAGE_DEFAULTS = {
     name: '',          // human-readable name (console / debugging)
     vibe: null,        // Clippy's mood for this stage: happy | annoyed | angry | panic (null = auto)
+    // Texts normally come from clippy-lines.js ("stages": { "<id>": {...} }).
+    // These fields are only a fallback for stages that aren't in that file yet.
     error: '',         // text in the "Mail Delivery Failed" popup
     clippy: '',        // what Clippy says when the stage starts
     hint: '',          // what Clippy says when clicked (costs time)
     retry: null,       // optional array of lines Clippy says when Send fails again
+    lines: null,       // { key: 'text' } — read with Game.line('key')
+    textVars: null,    // { limit: 500 } fills {limit} in error/clippy/hint/retry
     assets: [],        // documentation only: art files this stage uses
     todo: false,       // true = stub: shows "[stage not built yet]" and auto-passes
     final: false,      // true = the ending: no bounce, setup() owns the screen
@@ -120,6 +125,48 @@ window.Game = Game;
     check: null,       // check(G)   — true = fixed; false or 'reason' = still broken
     cleanup: null,     // cleanup(G) — undo anything not registered with Game.track
   };
+
+  /* ---- TEXT: every Clippy line / error / hint lives in clippy-lines.js ---- */
+  const fill = (text, vars) =>
+    vars ? String(text).replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m)) : text;
+  const warnedKeys = new Set();
+
+  /**
+   * Game.line('notTheCat')            -> the current stage's lines.notTheCat
+   * Game.line('general.adBanner')     -> any path inside Game.lines (dots)
+   * Game.line('converted', { name })  -> fills {name} placeholders
+   * Arrays come back as arrays (pick one yourself). A missing key returns
+   * "[missing text: key]" and warns in the console, so typos are easy to spot.
+   */
+  Game.line = function (key, vars) {
+    let value;
+    if (key.includes('.')) {
+      value = key.split('.').reduce((o, k) => (o == null ? undefined : o[k]), Game.lines);
+    } else {
+      value = Game.stage && Game.stage.lines ? Game.stage.lines[key] : undefined;
+    }
+    if (value == null) {
+      if (!warnedKeys.has(key)) {
+        warnedKeys.add(key);
+        console.warn(`[Game] Missing text "${key}" (stage ${Game.stage ? Game.stage.id : '-'}). Add it to clippy-lines.js.`);
+      }
+      return `[missing text: ${key}]`;
+    }
+    return Array.isArray(value) ? value.map((v) => fill(v, vars)) : fill(value, vars);
+  };
+
+  /** Copy a stage's texts from clippy-lines.js into the stage (file wins over the stage's own fields). */
+  function applyStageText(stage) {
+    const t = (Game.lines.stages || {})[String(stage.id)];
+    const vars = stage.textVars; // e.g. { limit: 500 } fills {limit}
+    if (t) {
+      ['error', 'clippy', 'hint'].forEach((k) => { if (t[k] != null) stage[k] = t[k]; });
+      if (t.retry) stage.retry = t.retry;
+      stage.lines = Object.assign({}, stage.lines, t.lines);
+    }
+    ['error', 'clippy', 'hint'].forEach((k) => { stage[k] = fill(stage[k] || '', vars); });
+    if (stage.retry) stage.retry = stage.retry.map((r) => fill(r, vars));
+  }
 
   /**
    * Register a stage. Called once at the top level of each stages/NN-*.js file.
@@ -1089,18 +1136,6 @@ window.Game = Game;
    * ======================================================================== */
   const MOODS = ['happy', 'annoyed', 'angry', 'panic'];
 
-  // Generic lines for "you pressed Send without fixing it". Stages can
-  // override with their own `retry: [...]` array.
-  const RETRY_LINES = [
-    'Did you... fix anything? Anything at all?',
-    "Same error. Bold strategy. Let's see if it pays off.",
-    "I'm not mad. I'm just disappointed.",
-    'Pressing Send harder does not help. I checked.',
-    'Bounce. Bounce. Bounce. Is this fun for you?',
-    'The printer and I are both very tired.',
-    'Have you tried actually reading the error?',
-  ];
-
   Game.clippy = {
     mood: 'happy',
     /** Game.clippy.say(text, mood) — mood: happy | annoyed | angry | panic */
@@ -1130,11 +1165,11 @@ window.Game = Game;
     if (!Game.started || Game.over) return;
     const stage = Game.stage;
     if (!stage || !stage.hint) {
-      Game.clippy.say('Just write the printer an email and press Send. I believe in you!');
+      Game.clippy.say(Game.line('general.noStageHint'));
       return;
     }
     const cost = CONFIG.HINT_COST_MINUTES;
-    Game.clippy.say(`Hint: ${stage.hint}\n\n(That hint cost you ${cost} minute${cost === 1 ? '' : 's'}.)`);
+    Game.clippy.say(Game.line('general.hint', { hint: stage.hint, minutes: cost }));
     Game.clock.add(cost);
   }
 
@@ -1405,7 +1440,7 @@ window.Game = Game;
     Game.clock.stop();
     Game.sound('error.wav');
     Game.shake();
-    Game.clippy.say("It's 9:00. The printer has printed your resignation letter. Single-sided. Out of spite.", 'angry');
+    Game.clippy.say(Game.line('general.fired'), 'angry');
     Game.popup({
       title: 'New message from printer@company.com',
       icon: 'warning',
@@ -1584,7 +1619,7 @@ window.Game = Game;
       icon: 'warning',
       text: `Your message bounced. Again.\n\nReason: ${reason || stage.error}`,
     });
-    const lines = stage.retry && stage.retry.length ? stage.retry : RETRY_LINES;
+    const lines = stage.retry && stage.retry.length ? stage.retry : Game.line('general.retry');
     const mood = stage.vibe === 'angry' || stage.vibe === 'panic' ? stage.vibe : 'annoyed';
     Game.clippy.say(pick(lines), mood);
   }
@@ -1674,27 +1709,17 @@ window.Game = Game;
     Game.started = true;
     $('#title-screen').classList.add('hidden');
     Game.clock.start();
-    if (!quiet) Game.clippy.say("Hi! It looks like you're late for work. Write the printer a quick email and press Send!", 'happy');
+    if (!quiet) Game.clippy.say(Game.line('general.greeting'), 'happy');
   }
 
-  // Sarcastic reactions for the decorative parts of the mail client
-  const TOOLBAR_LINES = {
-    new: "A NEW email? You can't even send this one.",
-    reply: 'Reply to what? Nobody has ever written to you.',
-    attach: "More attachments? Bold. Let's see how that goes.",
-    delete: 'Delete it? Then what would you bounce?',
-    settings: 'Settings are locked. For your safety. And mine.',
-  };
-  const FOLDER_LINES = {
-    inbox: "Inbox: 0 messages. The printer doesn't write back.",
-    outbox: 'Outbox: 1 message, stuck. You know which one.',
-    sent: 'Sent: empty. Like your track record.',
-    drafts: "Drafts: 47 versions of 'sorry I'm late'.",
-    bounced: () => `Bounced: ${Game.bounces}. And counting.`,
-    trash: 'Trash: your previous excuses.',
-  };
-
   function init() {
+    // Texts: clippy-lines.js must have loaded (and be valid JSON) before this point.
+    if (!Game.lines || !Game.lines.general) {
+      console.error('[Game] clippy-lines.js did not load or has a typo (check commas/quotes). All texts will show as [missing text].');
+      Game.lines = Game.lines || {};
+    }
+    Game.stages.forEach(applyStageText);
+
     root = $('#game');
     screen = $('#screen');
     Game.layers = {
@@ -1743,27 +1768,25 @@ window.Game = Game;
     m.window.addEventListener('pointerdown', () => Game.bringToFront(m.window));
     Game.bringToFront(m.window);
     const talk = (text, mood) => { if (Game.started && !Game.over) Game.clippy.say(text, mood || 'annoyed'); };
-    $('.xp-tb-close', m.window).addEventListener('click', () => talk("Nice try. The email isn't going to send itself."));
-    $('.xp-tb-min', m.window).addEventListener('click', () => talk('Minimizing your problems? Classic.'));
-    $('.xp-tb-max', m.window).addEventListener('click', () => talk('It is already as big as your excuse.'));
+    $('.xp-tb-close', m.window).addEventListener('click', () => talk(Game.line('general.mailClose')));
+    $('.xp-tb-min', m.window).addEventListener('click', () => talk(Game.line('general.mailMinimize')));
+    $('.xp-tb-max', m.window).addEventListener('click', () => talk(Game.line('general.mailMaximize')));
+    // Sarcastic reactions for the decorative parts of the mail client
     document.querySelectorAll('[data-tb]').forEach((btn) =>
-      btn.addEventListener('click', () => talk(TOOLBAR_LINES[btn.dataset.tb]))
+      btn.addEventListener('click', () => talk(Game.line('general.toolbar.' + btn.dataset.tb)))
     );
     document.querySelectorAll('[data-folder]').forEach((row) =>
-      row.addEventListener('click', () => {
-        const line = FOLDER_LINES[row.dataset.folder];
-        talk(typeof line === 'function' ? line() : line, 'happy');
-      })
+      row.addEventListener('click', () => talk(Game.line('general.folders.' + row.dataset.folder, { count: Game.bounces }), 'happy'))
     );
-    $('#ad-banner').addEventListener('click', () => talk('Join later. You are LATE, remember?'));
-    $('#user-avatar').addEventListener('click', () => talk("That's you. You look like someone who's late.", 'happy'));
-    $('#saga-logo').addEventListener('click', () => talk('Outlook Saga: bouncing emails since 2003.', 'happy'));
+    $('#ad-banner').addEventListener('click', () => talk(Game.line('general.adBanner')));
+    $('#user-avatar').addEventListener('click', () => talk(Game.line('general.avatar'), 'happy'));
+    $('#saga-logo').addEventListener('click', () => talk(Game.line('general.sagaLogo'), 'happy'));
 
     // ---- taskbar ----
     clockEl = $('#clock');
     trayIcons = $('#tray-icons');
     renderClock();
-    $('#start-button').addEventListener('click', () => talk('There is no Start menu. There is only the email.'));
+    $('#start-button').addEventListener('click', () => talk(Game.line('general.startButton')));
     $('#task-mail').addEventListener('click', () => Game.bringToFront(m.window));
     // Built-in tray icons (added right-to-left). Stages change them with
     // Game.tray.setIcon / setText — and put them back in cleanup.
@@ -1776,26 +1799,20 @@ window.Game = Game;
       id: 'outlook', label: 'Outlook Saga', asset: 'app-icon.png', x: 16, y: 16, persist: true,
       onClick: () => Game.bringToFront(m.window),
     });
-    // Joke "apps": real (non-modal, draggable) app windows, one per app.
-    const desktopApp = (id, title, icon, text, x, y) => () =>
-      Game.openApp({
-        id, title, icon, x, y, w: 360, h: 200, persist: true,
-        html: Object.assign(make('div', 'app-text'), { textContent: text }),
-      });
+    // Desktop "apps": plain (empty) app windows — non-modal, draggable, one per app.
+    const desktopApp = (id, title, icon, x, y) => () =>
+      Game.openApp({ id, title, icon, x, y, w: 360, h: 200, persist: true });
     Game.addIcon({
       id: 'my-computer', label: 'My Computer', asset: 'icon-my-computer.png', x: 16, y: 106, persist: true,
-      onClick: desktopApp('my-computer', 'My Computer', 'icon-my-computer.png',
-        'Local Disk (C:) is 99% full.\n\nMostly excuses.', 150, 90),
+      onClick: desktopApp('my-computer', 'My Computer', 'icon-my-computer.png', 150, 90),
     });
     Game.addIcon({
       id: 'homework', label: 'Homework', asset: 'icon-homework.png', x: 16, y: 196, persist: true,
-      onClick: desktopApp('homework', 'Homework', 'icon-homework.png',
-        'This folder is 40 GB.\n\nClippy is not asking any questions.', 180, 180),
+      onClick: desktopApp('homework', 'Homework', 'icon-homework.png', 180, 180),
     });
     Game.addIcon({
       id: 'folder', label: 'New Folder (37)', asset: 'icon-folder.png', x: 16, y: 286, persist: true,
-      onClick: desktopApp('folder', 'New Folder (37)', 'icon-folder.png',
-        'This folder is empty.\n\nLike your excuse.', 210, 270),
+      onClick: desktopApp('folder', 'New Folder (37)', 'icon-folder.png', 210, 270),
     });
 
     // ---- Clippy ----

@@ -12,22 +12,13 @@
  * ========================================================================== */
 
 (function () {
-  const MIN_INK = 150;
-  const COMMENTS = [
-    'Signature looks nervous.',
-    'Is that a horse?',
-    'Accepted. Barely.',
-    'We will frame this. As evidence.',
-  ];
+  const MIN_INK = 150; // server comments: clippy-lines.js -> "11" -> lines.serverComments
 
   Game.registerStage({
     id: 11,
     name: 'Signature',
     vibe: 'angry',
-    error: 'Signature required. Unsigned emails could be from anyone. Even you.',
-    clippy: "The printer wants a signature. Draw something. Anything. I'm not judging. (I am judging.)",
-    hint: 'Draw on the signature pad with the mouse (a decent scribble, not a dot), then press "Submit signature".',
-    retry: ['No signature, no delivery. Those are the rules. I just made them up.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "11"
     assets: ['signature-pad.png'],
 
     setup(G) {
@@ -85,8 +76,8 @@
         G.state.signed = true;
         G.mail.body = G.mail.body.replace(/\s+$/, '') + '\n\n[signature.png]';
         win.close();
-        G.popup({ title: 'Signature Server', icon: 'info', text: COMMENTS[Math.floor(Math.random() * COMMENTS.length)] });
-        G.clippy.say('Signed. Legally binding. Emotionally damaging.', 'angry');
+        G.popup({ title: 'Signature Server', icon: 'info', text: (() => { const c = G.line('serverComments'); return c[Math.floor(Math.random() * c.length)]; })() });
+        G.clippy.say(G.line('signed'), 'angry');
       });
       submit.style.minWidth = '150px';
 

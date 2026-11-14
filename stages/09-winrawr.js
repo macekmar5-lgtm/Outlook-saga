@@ -43,7 +43,7 @@
         G.timeout(() => openNag(G, true), 700);
       } else {
         G.state.winrawrDone = true;
-        G.clippy.say('WinRAWR is sad. You did that. I hope you are happy.', 'annoyed');
+        G.clippy.say(G.line('dismissed'), 'annoyed');
       }
     });
     cont.style.left = '290px';
@@ -77,10 +77,7 @@
     id: 9,
     name: 'WinRAWR',
     vibe: 'annoyed',
-    error: 'WinRAWR license exceeded. Zipped attachments cannot be sent.',
-    clippy: 'Ah, WinRAWR. Everyone has a free trial. Nobody has EVER bought it. Please do not be the first. It would upset the balance.',
-    hint: 'Don\'t chase "Buy license". Click "Continue trial". Twice. WinRAWR does not give up easily.',
-    retry: ['WinRAWR is still open. Nobody gets past WinRAWR on the first try.', 'Continue. The. Trial.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "9"
     assets: ['winrawr-logo.png'],
 
     setup(G) {

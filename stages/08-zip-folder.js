@@ -18,10 +18,7 @@
     id: 8,
     name: 'Zip folder',
     vibe: 'annoyed',
-    error: 'Attachments must be sent as one zipped folder.',
-    clippy: 'Loose files? In THIS office? Zip them up like a professional. Like me. I am extremely zipped.',
-    hint: 'Drag each attachment onto "New Folder.zip" (bottom left). Then drag the zip icon itself into the email window.',
-    retry: ['ONE zip. Not zero. Not five. One.', 'Files go IN the zip. The zip goes IN the email. Riveting stuff.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "8"
     assets: ['icon-zip.png'],
 
     setup(G) {
@@ -39,14 +36,14 @@
       G.dragAttachments((att, point) => {
         if (!G.hitTest(zip, point)) return;
         if (/\.zip$/i.test(att.name)) {
-          G.clippy.say('A zip inside a zip. Very deep. No.', 'annoyed');
+          G.clippy.say(G.line('zipInZip'), 'annoyed');
           return;
         }
         G.attachments.remove(att.name);
         G.state.zipped.push(att.name);
         zip.setLabel(`${ZIP} (${G.state.zipped.length})`);
         if (!G.attachments.list().length) {
-          G.clippy.say('All zipped. Now drag the zip into the email. Yes, the whole folder. Yes, with the mouse.', 'annoyed');
+          G.clippy.say(G.line('allZipped'), 'annoyed');
           G.highlight(zip, 2500);
         }
       });
@@ -57,16 +54,16 @@
           if (!G.hitTest(G.mail.el.window, point)) return;
           const loose = G.attachments.list().filter((a) => !/\.zip$/i.test(a.name));
           if (loose.length) {
-            G.clippy.say(`There are still ${loose.length} loose file(s) in the email. Zip them first.`, 'annoyed');
+            G.clippy.say(G.line('looseFiles', { count: loose.length }), 'annoyed');
             return;
           }
           if (!G.state.zipped.length) {
-            G.clippy.say('An empty zip. Very efficient. Very pointless.', 'annoyed');
+            G.clippy.say(G.line('emptyZip'), 'annoyed');
             return;
           }
           G.attachments.add(ZIP, `${G.state.zipped.length} files`, 'icon-zip.png');
           zip.remove();
-          G.clippy.say('One zip. Neat. Tidy. Suspiciously competent of you.', 'annoyed');
+          G.clippy.say(G.line('attached'), 'annoyed');
         },
       });
     },

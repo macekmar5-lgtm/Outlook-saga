@@ -28,13 +28,7 @@
     id: 3,
     name: 'Too many attachments',
     vibe: 'happy',
-    error: 'Email contains too many attachments (max 3).',
-    clippy: 'Oh no, 5 attachments! The printer only accepts 3. Maybe drag a few into the Recycle Bin? Especially that .exe. Just a friendly thought! :)',
-    hint: 'Drag attachments from the email onto the Recycle Bin (bottom left). Bin the .exe, keep the cat. Max 3 left.',
-    retry: [
-      'Still too many! Three is the magic number. :)',
-      'The Recycle Bin is hungry. Feed it. Not the cat though.',
-    ],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "3"
     assets: ['file-photo.png', 'file-doc.png', 'file-exe.png', 'trash-empty.png', 'trash-full.png'],
 
     setup(G) {
@@ -49,13 +43,13 @@
         if (!G.hitTest(bin, point)) return; // dropped somewhere else: chip stays in the email
         if (att.name === 'cat.jpg') {
           G.shake();
-          G.clippy.say('Not the cat. Never the cat.', 'annoyed');
+          G.clippy.say(G.line('notTheCat'), 'annoyed');
           return; // the cat bounces back into the email
         }
         G.attachments.remove(att.name);
         G.setAsset(binImg, 'trash-full.png');
         G.sound('bounce.wav', 0.4);
-        if (att.name === EXE) G.clippy.say('Bye bye, "definitely not a virus". You will not be missed.', 'happy');
+        if (att.name === EXE) G.clippy.say(G.line('exeGone'), 'happy');
       });
 
       G.timeout(() => G.highlight(bin, 3000), 600);

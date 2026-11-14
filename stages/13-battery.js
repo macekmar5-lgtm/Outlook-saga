@@ -23,10 +23,7 @@
     id: 13,
     name: 'Battery 3%',
     vibe: 'panic',
-    error: 'Battery at 3%. Plug in your laptop.',
-    clippy: 'BATTERY. THREE. PERCENT. The charger is on the desktop, UNDER the email. The port is on the RIGHT. STOP CLICKING THINGS, EVERY CLICK COSTS US A SECOND.',
-    hint: 'The charger plug peeks out from under the left edge of the mail window. Drag it onto the laptop port at the right edge of the screen.',
-    retry: ['WE ARE STILL ON BATTERY. I CAN SEE THE LIGHT.', 'PLUG. INTO. PORT. I am begging you.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "13"
     assets: ['charger-plug.png', 'laptop-port.png', 'tray-battery.png'],
 
     setup(G) {
@@ -48,14 +45,14 @@
         plug.style.left = port.offsetLeft - 80 + 'px';
         plug.style.top = port.offsetTop - 5 + 'px';
         G.tray.setText('battery', 'Charging');
-        G.clippy.say("IT'S CHARGING. I CAN FEEL MY PIXELS AGAIN. Send the email. SEND IT.", 'panic');
+        G.clippy.say(G.line('charging'), 'panic');
       };
 
       G.dragGhost(plug, {
         canDrag: () => !s.plugged && !s.dead,
         onDrop(point) {
           if (G.hitTest(port, point)) plugIn();
-          else G.clippy.say('THAT IS NOT THE PORT. THE PORT IS ON THE RIGHT.', 'panic');
+          else G.clippy.say(G.line('wrongSpot'), 'panic');
         },
       });
 
@@ -79,7 +76,7 @@
           if (Game.over || G.stage !== this) return;
           G.clock.add(DEATH_COST_MINUTES);
           G.restartStage();
-          if (!Game.over) G.clippy.say(`WE ARE BACK. That cost ${DEATH_COST_MINUTES} minutes. 20 seconds. AGAIN. Plug. It. In.`, 'panic');
+          if (!Game.over) G.clippy.say(G.line('revived', { minutes: DEATH_COST_MINUTES }), 'panic');
         });
       }, 100);
     },

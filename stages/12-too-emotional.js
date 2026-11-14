@@ -42,10 +42,7 @@
     id: 12,
     name: 'Too emotional',
     vibe: 'angry',
-    error: 'Email is too emotional. Mood analysis: 87% anger.',
-    clippy: '87% ANGER?! Who taught you to write to a printer like that? Calm. Down. NOW. Like me. I am VERY calm.',
-    hint: 'Click every red SHOUTY word in the email to calm it down, until the Mood Meter is at 15% or less.',
-    retry: ['Still furious. The printer is shaking. Well, it always shakes. But more now.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "12"
     assets: ['mood-meter.png', 'mood-needle.png'],
 
     setup(G) {
@@ -73,7 +70,7 @@
         token.tag = null;
         G.state.mood.anger = Math.max(0, G.state.mood.anger - STEP);
         setMeter(G);
-        if (G.state.mood.anger <= TARGET) G.clippy.say('Calm. Serene. Passive-aggressive at a professional level. Send it.', 'angry');
+        if (G.state.mood.anger <= TARGET) G.clippy.say(G.line('calm'), 'angry');
       });
     },
 

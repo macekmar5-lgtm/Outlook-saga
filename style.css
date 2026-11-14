@@ -601,10 +601,13 @@ canvas { display: block; }
 #game.skin-cursor-loading { --cur-busy: var(--img-cursor-loading) var(--hotspot-cursor-loading), progress; }
 
 #game, #game * { cursor: var(--cur-default); }
-/* :where() keeps these at the same strength as the line above, so order decides */
-#game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .captcha-tile, .sig-pad canvas) { cursor: var(--cur-hand); }
+/* :where() keeps these at the same strength as the line above, so order decides.
+   The second selector gives the hand to everything INSIDE a clickable thing too
+   (icon picture, label, button text), so the whole thing shows the hand. */
+#game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .captcha-cell, .tray-item.clickable, .sig-pad canvas),
+#game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .captcha-cell, .tray-item.clickable) * { cursor: var(--cur-hand); }
 #game :where(input:not([readonly]), textarea) { cursor: var(--cur-text); }
-#game :where(button:disabled, .ui-checkbox.read-only) { cursor: var(--cur-default); }
+#game :where(button:disabled, button:disabled *, .ui-checkbox.read-only, .ui-checkbox.read-only *) { cursor: var(--cur-default); }
 /* busy (while the envelope is flying) — keep last so it wins */
 #game.busy, #game.busy * { cursor: var(--cur-busy) !important; }
 
@@ -666,7 +669,23 @@ canvas { display: block; }
 .rule-list .ui-checkbox { color: var(--rule-fail-text); }
 .rule-list .ui-checkbox.is-checked { color: var(--rule-pass-text); }
 
-/* stage 16: captcha (captcha-frame.png, boss-N.png, checkbox overlays) */
-.captcha-grid { display: grid; grid-template-columns: repeat(3, 116px); gap: 6px; padding: 10px; justify-content: center; }
-.captcha-tile { position: relative; width: 116px; height: 116px; }
-.captcha-tile .captcha-check { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; }
+/* stage 16: bus captcha. One picture (captcha-bus.png) cut into 4x4 squares by
+   positioning; the 4px gaps show captcha-frame.png behind them = the grid lines. */
+.captcha-header { width: 412px; padding: 12px 18px; text-align: left; }
+.captcha-header-small { font-size: 13px; }
+.captcha-header-big { font-size: 26px; font-weight: bold; line-height: 1.2; }
+#game.skin-captcha-header .captcha-header { color: #fff; } /* white text on the blue header art */
+.captcha-grid { display: grid; grid-template-columns: repeat(4, 100px); gap: 4px; padding: 0; width: 412px; }
+.captcha-cell { position: relative; width: 100px; height: 100px; }
+.captcha-crop { position: absolute; inset: 0; overflow: hidden; transition: transform 0.12s; }
+.captcha-pic { position: absolute; }
+.captcha-cell.selected .captcha-crop { transform: scale(0.82); } /* real captchas shrink the square */
+.captcha-tick { position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; }
+/* dev-only: until captcha-bus.png exists, show each square as a numbered placeholder */
+#game:not(.skin-captcha-bus) .captcha-cell { outline: 2px dashed var(--placeholder-line); outline-offset: -2px; }
+#game:not(.skin-captcha-bus) .captcha-cell::after {
+  content: attr(data-n);
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font: bold 22px "Courier New", monospace; color: var(--placeholder-label); pointer-events: none;
+}
+#game:not(.skin-captcha-bus) .captcha-pic { visibility: hidden; }

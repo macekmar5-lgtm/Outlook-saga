@@ -28,10 +28,7 @@
     id: 10,
     name: 'Autocorrect',
     vibe: 'angry',
-    error: 'Autocorrect improved your email. Too many apologies detected.',
-    clippy: 'I made your email more apologetic. Sorry. You are welcome. Sorry. I said sorry. SORRY.',
-    hint: 'Click every red "sorry" in the email to delete it. Some come back as "apologies" — click those too.',
-    retry: ['Still sorry. So, so sorry.', 'The printer does not accept apologies. Or sorries. Click them all.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "10"
     assets: [],
 
     setup(G) {
@@ -62,7 +59,7 @@
         }
         removeToken(view, i);
         if (!view.count('sorry') && !view.count('apologies')) {
-          G.clippy.say('No more apologies. You monster. Fine. Send it.', 'angry');
+          G.clippy.say(G.line('allGone'), 'angry');
         }
       });
     },

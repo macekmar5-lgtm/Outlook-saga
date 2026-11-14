@@ -27,9 +27,9 @@
       G.state.background = mode;
       G.setAsset(preview, mode === 'office' ? 'webcam-office.png' : 'webcam-bed.png');
       preview.classList.toggle('blurry', mode === 'blur');
-      if (mode === 'blur') G.clippy.say('Still a bed. Just a blurry bed.', 'panic');
-      if (mode === 'none') G.clippy.say('NONE?! THE PRINTER CAN SEE YOUR PILLOW.', 'panic');
-      if (mode === 'office') G.clippy.say('LOOK AT YOU. SO EMPLOYED. SO NOT IN BED. Send it before the illusion breaks.', 'panic');
+      if (mode === 'blur') G.clippy.say(G.line('blur'), 'panic');
+      if (mode === 'none') G.clippy.say(G.line('none'), 'panic');
+      if (mode === 'office') G.clippy.say(G.line('office'), 'panic');
     };
     options.append(
       G.ui.button('None', () => set('none')),
@@ -47,10 +47,7 @@
     id: 14,
     name: 'Sent from bed',
     vibe: 'panic',
-    error: 'Email detected that you are sending it from bed.',
-    clippy: 'ARE YOU IN BED?! IN THOSE PAJAMAS?! Open the webcam app RIGHT NOW and turn on the office background before the printer SEES!',
-    hint: 'Click "Webcam" (top right of the desktop), press "Background effects", choose "Office".',
-    retry: ['YOU ARE STILL VISIBLY IN BED.', 'Blur is not a solution. Blur is a lifestyle. Pick OFFICE.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "14"
     assets: ['icon-webcam.png', 'webcam-bed.png', 'webcam-office.png'],
 
     setup(G) {

@@ -33,10 +33,8 @@
     id: 5,
     name: 'Character limit',
     vibe: 'happy',
-    error: `Email exceeds the character limit (${LIMIT}).`,
-    clippy: "I helpfully added some context to your email! Your life story, the bus timetable and an apology to the printer. Now it's a teeny bit long. Oopsie! :)",
-    hint: `Delete text from the email body until the counter below it shows ${LIMIT} or less (but keep at least ${MIN} characters).`,
-    retry: ['Still too long! Nobody reads past the first line anyway. :)', 'Delete, delete, delete. Have fun!'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "5"
+    textVars: { limit: LIMIT, min: MIN }, // fills {limit} / {min} in those texts
     assets: ['char-counter-bg.png'],
 
     setup(G) {

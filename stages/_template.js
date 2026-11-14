@@ -124,7 +124,10 @@ Game.registerStage({
  *  Progress   G.runProgress(G.ui.progress(0), ms, ['step 1', 'step 2'], labelEl).then(...)
  *  Restart    G.restartStage()  /  G.blackout('Laptop died.', 2000).then(...)
  *  Juice      G.highlight(elOrSelector, ms) / G.shake()
- *  Clippy     G.clippy.say(text, 'happy'|'annoyed'|'angry'|'panic')
+ *  Clippy     G.clippy.say(G.line('someKey'), 'happy'|'annoyed'|'angry'|'panic')
+ *  Text       Real stages keep ALL text in clippy-lines.js ("stages" -> "<id>": error, clippy,
+ *             hint, retry, lines). This template has its texts inline, which also works
+ *             as a fallback while a stage isn't in clippy-lines.js yet.
  *  Time       G.clock.add(minutes) / G.clock.minutesLeft
  *  Cleanup    G.track(fn) / G.on(el, type, fn) / G.timeout(fn, ms) / G.interval(fn, ms)
  *  Shared     G.state.anything = ...

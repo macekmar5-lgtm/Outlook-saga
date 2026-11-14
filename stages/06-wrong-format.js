@@ -39,10 +39,7 @@
     id: 6,
     name: 'Wrong format',
     vibe: 'happy',
-    error: 'Photo attachments are in the wrong format. Please use PNG.',
-    clippy: 'The printer only reads PNG. Old printers are like that, bless them. There is a converter on the desktop now. Double-click it! :)',
-    hint: 'Double-click "Convertinator 3000" (top right of the desktop), then drag the cat.jpg attachment into its drop zone.',
-    retry: ['Still a JPG! The converter is top right. Double-click. Like it is 2003.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "6"
     assets: ['icon-converter.png', 'drop-zone.png', 'progress-bar.png', 'progress-fill.png'],
 
     setup(G) {
@@ -51,7 +48,7 @@
 
       const icon = G.addIcon({
         id: 'converter', label: 'Convertinator 3000', asset: 'icon-converter.png', x: 1080, y: 40,
-        onClick: () => G.clippy.say('Double-click. It is 2003. We double-click here.', 'happy'),
+        onClick: () => G.clippy.say(G.line('doubleClick'), 'happy'),
         onDoubleClick: () => openConverter(G),
       });
       G.timeout(() => G.highlight(icon, 3000), 600);
@@ -60,7 +57,7 @@
         const zone = G.state.converterZone;
         if (!zone || !zone.isConnected || !G.hitTest(zone, point)) return;
         if (!isJpg(att.name)) {
-          G.clippy.say("That's not a JPG. Even I know that, and I'm a paperclip.", 'happy');
+          G.clippy.say(G.line('notJpg'), 'happy');
           return;
         }
         if (G.state.converting) return;
@@ -72,7 +69,7 @@
           G.attachments.rename(att.name, newName);
           G.state.converting = false;
           label.textContent = `Done: ${newName}`;
-          G.clippy.say(`Behold: ${newName}. Same cat, more N.`, 'happy');
+          G.clippy.say(G.line('converted', { name: newName }), 'happy');
         });
       });
     },

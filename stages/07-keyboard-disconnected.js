@@ -26,10 +26,7 @@
     id: 7,
     name: 'Keyboard disconnected',
     vibe: 'annoyed',
-    error: 'Keyboard disconnected. Your keyboard took the subject with it.',
-    clippy: "Your keyboard took the subject with it. Don't worry, I built you a new one. I sorted the keys myself. You're welcome, I guess.",
-    hint: 'Your real keyboard is dead. Click letters on the on-screen keyboard to type a subject (3+ characters). The keys move. That is a feature.',
-    retry: ['I can hear you typing. It is not working. Use. The. Keyboard. Window.', 'Three letters. You can do three letters. Probably.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "7"
     assets: ['keyboard-frame.png', 'key.png', 'key-pressed.png', 'tray-keyboard-off.png'],
 
     setup(G) {

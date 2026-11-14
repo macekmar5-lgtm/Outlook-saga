@@ -14,7 +14,10 @@ you were asked to work on.
 1. **Plain HTML + CSS + vanilla JS.** No frameworks, no npm, no build step, no modules
    (`import`/`export`), no fetch of local files. It must run by double-clicking
    `index.html` (file://) AND on itch.io.
-2. **ALL VISUALS ARE HUMAN-MADE FILES IN /assets.** Never generate images, SVG, canvas
+2. **ALL VISUALS ARE FILES IN /assets, made by the team or free-licensed stock photos.**
+   Stock is OK only with a license that allows use in a game (public domain / CC0 preferred;
+   verify on the source page) and must be logged in CREDITS.md. **Never AI-generated art.**
+   Never generate images, SVG, canvas
    pictures, emoji-as-icons, base64 images, or **CSS-drawn graphics**: no gradients, no
    shadows (box/text), no rounded corners, no coloured boxes/backgrounds, no decorative
    borders/outlines, no shapes, no glyphs standing in for icons (×, ✓).
@@ -51,6 +54,8 @@ index.html          title screen, desktop, the mail client, taskbar, layers; loa
 style.css           layout + text only. Section 1 = ART LIST + 9-slice settings,
                     section 13 = layout for stage windows
 engine.js           CONFIG + the global `Game` object (all helpers + game flow)
+clippy-lines.js     ALL TEXT: Clippy's lines, each stage's error/hint/retry, in-stage reactions.
+                    `Game.lines = { ...valid JSON... }` (a .js file because file:// can't load .json)
 stages/_template.js documented example stage (NOT loaded by index.html)
 stages/NN-name.js   one file per stage, registered with Game.registerStage (all 18 are built)
 tools/fix-art.ps1   converts fake PNGs (.heic) to real PNGs, warns about white backgrounds
@@ -58,7 +63,16 @@ assets/             hand-made art (png)          — pushed by the artists
 assets/sounds/      hand-made sounds (wav)       — pushed by the audio people
 ```
 
-Script order in index.html: `engine.js`, then every `stages/*.js`. `init()` runs on
+**Text lives in `clippy-lines.js`, not in stage files.** `"general"` = engine lines (greeting,
+hint format, generic retries, toolbar/folder reactions, fired); `"stages": { "<id>": { error, clippy,
+hint, retry, lines: { key: text } } }`. At init the engine copies each stage's texts onto the stage
+(`applyStageText`); `{name}` placeholders are filled from `textVars` on the stage, or from the vars
+passed to `Game.line(key, vars)`. In stage code, say things with `G.clippy.say(G.line('key'), mood)` —
+never hard-code a Clippy line. Popup "Reason:" strings returned by `check()` may stay in code.
+Keep the file valid JSON (double quotes, no trailing commas). A missing key shows
+`[missing text: key]` and warns in the console.
+
+Script order in index.html: `engine.js`, `clippy-lines.js`, then every `stages/*.js`. `init()` runs on
 `DOMContentLoaded`, after all stages registered. A missing stage file just 404s and is
 skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
 
@@ -192,6 +206,7 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 | Juice | `highlight(selOrEl, ms)` (pulsing highlight-frame.png; 0 = until stage end) → off(); `shake()`; `blackout(text, ms)` → Promise (black screen + text) |
 | Flow | `restartStage()` (cleanup + setup again, no popup), `send()`, `restart()` |
 | Clippy | `clippy.say(text, mood)`, `clippy.hide()`, `clippy.mood` |
+| Text | `line('key', vars)` (current stage's `lines`), `line('general.x.y', vars)` (any path); stage fields `textVars`, `lines` (fallbacks if clippy-lines.js has no entry) |
 | Clock | `clock.add(min)`, `clock.minutes`, `clock.minutesLeft`, `clock.start/stop/freeze/disableDeadline()` |
 | Cleanup | `track(fn)`, `on(target, type, fn, opts)`, `timeout(fn, ms)`, `interval(fn, ms)` |
 | Misc | `state` {}, `stage`, `stages`, `stageIndex`, `over`, `bounces`, `layers.{icons,windows,highlight,popups,fx,overlay}`, `make(tag, cls, text)`, `CONFIG` |

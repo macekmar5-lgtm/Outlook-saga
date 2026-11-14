@@ -27,7 +27,7 @@
     bar.classList.add('hidden');
     const btn = G.ui.button('Compress', () => {
       if (G.state.catCompressed) {
-        G.clippy.say("He's already flat. Any more and he's a pancake.", 'happy');
+        G.clippy.say(G.line('alreadyFlat'), 'happy');
         return;
       }
       btn.disabled = true;
@@ -38,7 +38,7 @@
         G.attachments.setSize('cat.jpg', '3 MB');
         G.state.catCompressed = true;
         G.shake();
-        G.clippy.say('There. Slightly flatter, fully legal. 3 MB of cat.', 'happy');
+        G.clippy.say(G.line('compressed'), 'happy');
       });
     });
     col.append(img, size, bar, label, btn);
@@ -49,10 +49,7 @@
     id: 4,
     name: 'File too big',
     vibe: 'happy',
-    error: 'Attachments exceed the file size limit (25 MB). cat.jpg is 4.2 GB.',
-    clippy: 'Oh! The printer only has 25 MB of memory. Click the cat.jpg attachment and compress him. Gently, he is very soft.',
-    hint: 'Click the cat.jpg chip in the email to open it, then press "Compress".',
-    retry: ['The cat is still 4.2 GB. That is a LOT of cat.', 'Click the cat. Press Compress. I believe in you! :)'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "4"
     assets: ['cat.png', 'cat-squished.png', 'file-photo.png', 'progress-bar.png', 'progress-fill.png'],
 
     setup(G) {

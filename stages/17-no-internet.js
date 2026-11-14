@@ -15,10 +15,7 @@
     id: 17,
     name: 'No internet',
     vibe: 'panic',
-    error: 'No internet connection.',
-    clippy: "THE INTERNET IS GONE. THE CABLE IS RIGHT THERE. I CAN'T PLUG IT IN. I DON'T HAVE HANDS. I HAVE NEVER HAD HANDS.",
-    hint: 'The network cable sticks out from under the left edge of the mail window. Drag it onto the wall socket at the bottom left.',
-    retry: ['STILL OFFLINE. The cable. The socket. Make them touch.', 'Have you tried turning the internet on and off again? No. Plug the cable.'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "17"
     assets: ['network-cable.png', 'wall-socket.png', 'tray-wifi-off.png', 'tray-wifi.png'],
 
     setup(G) {
@@ -35,7 +32,7 @@
         canDrag: () => !G.state.online,
         onDrop(point) {
           if (!G.hitTest(socket, point)) {
-            G.clippy.say('THAT IS NOT A SOCKET. THE SOCKET IS BOTTOM LEFT.', 'panic');
+            G.clippy.say(G.line('wrongSpot'), 'panic');
             return;
           }
           G.state.online = true;
@@ -44,7 +41,7 @@
           G.tray.setIcon('wifi', 'tray-wifi.png');
           G.tray.get('wifi').title = 'Connected';
           G.mail.status = Game.CONFIG.STATUS_TEXT;
-          G.clippy.say('WE ARE ONLINE. I can feel the internet. It is mostly cat pictures. SEND. THE. EMAIL.', 'panic');
+          G.clippy.say(G.line('online'), 'panic');
         },
       });
     },

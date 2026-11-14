@@ -32,10 +32,7 @@
     id: 15,
     name: 'Boss blocked you',
     vibe: 'panic',
-    error: 'Your boss has blocked you.',
-    clippy: "THE PRINTER BLOCKED YOU. That's fine. That's FINE. Make a new account. Strong password. STRONGER. STRONGER THAN THAT.",
-    hint: 'Pick a username, then keep pressing Create: each try reveals a new rule. A password like "Bounce8kiwiMayprinter" passes all 7.',
-    retry: ['STILL BLOCKED. MAKE. AN. ACCOUNT.', 'The password needs a fruit. I do not make the rules. (I do make the rules.)'],
+    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "15"
     assets: ['checkbox.png', 'checkbox-checked.png'],
 
     setup(G) {
@@ -69,7 +66,7 @@
           G.state.account = name;
           G.mail.from = `${name}@company.com`;
           win.close();
-          G.clippy.say(`Welcome, ${name}. The printer has not blocked you. YET.`, 'panic');
+          G.clippy.say(G.line('welcome', { name }), 'panic');
           return;
         }
         if (revealed < RULES.length) revealed++;
