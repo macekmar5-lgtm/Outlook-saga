@@ -54,7 +54,7 @@
       const tokens = [...Game.wordView.split(head), ...RANT.map((t) => ({ ...t })), ...Game.wordView.split(tail)];
 
       // Mood meter window (top right)
-      const win = G.openWindow({ title: 'Mood Meter 2000', x: 1034, y: 12, w: 240, h: 240, closable: false });
+      const win = G.openWindow({ title: 'Mood Meter 2000', x: 1034, y: 12, w: 240, h: 240, closable: false, alwaysOnTop: true });
       const dial = G.make('div', 'mood-dial');
       dial.appendChild(G.asset('mood-meter.png', { w: 200, h: 110 }));
       const needle = G.asset('mood-needle.png', { w: 10, h: 90, className: 'mood-needle' });

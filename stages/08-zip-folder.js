@@ -63,7 +63,6 @@
           }
           G.attachments.add(ZIP, `${G.state.zipped.length} files`, 'icon-zip.png');
           zip.remove();
-          G.clippy.say(G.line('attached'), 'annoyed');
         },
       });
     },

@@ -189,6 +189,9 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 - [x] `winxp.wav`: plays when the loading screen ends and the desktop appears
 - [x] `button.wav`: plays on every button and desktop-icon press (dialogs, toolbar, keys, title bar, Start, SUBMIT, icons)
 - [x] `fan.wav`: PC fan, loops the whole game; loud when you press Start, then fades to a quiet hum (`FAN_*` in CONFIG)
+- [x] `compressing.mp3`: stage 4, plays when the hydraulic press squishes the cat all the way flat
+- [ ] `easter-egg.wav`: typing "hack club" / "game jam" in the subject (achievement popup)
+- [ ] `new-mail.wav`: stage 18, the printer's reply lands in the Inbox
 - Clippy has **no** sound (on purpose), so `clippy.wav` isn't used.
 
 ---

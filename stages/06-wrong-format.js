@@ -19,12 +19,12 @@
     const win = G.openApp({
       id: 'converter', title: 'Convertinator 3000 (Trial)', icon: 'icon-converter.png',
       x: 690, y: 300, w: 330, h: 290,
+      alwaysOnTop: true, // clicking the email must not hide it behind the mail window
     });
     if (!win.created) return;
 
     const col = G.make('div', 'stage-col');
-    const zone = G.make('div', 'drop-zone', 'Drop a .jpg attachment here.\nIt will come out as .png.');
-    zone.style.whiteSpace = 'pre-line';
+    const zone = G.make('div', 'drop-zone'); // no text: "Drop files here" is drawn in drop-zone.png
     G.setSkin(zone, 'drop-zone.png');
     const bar = G.ui.progress(0);
     bar.classList.add('hidden');
@@ -48,7 +48,6 @@
 
       const icon = G.addIcon({
         id: 'converter', label: 'Convertinator 3000', asset: 'icon-converter.png', x: 1080, y: 40,
-        onClick: () => G.clippy.say(G.line('doubleClick'), 'happy'),
         onDoubleClick: () => openConverter(G),
       });
       G.timeout(() => G.highlight(icon, 3000), 600);
@@ -69,9 +68,14 @@
           G.attachments.rename(att.name, newName);
           G.state.converting = false;
           label.textContent = `Done: ${newName}`;
-          G.clippy.say(G.line('converted', { name: newName }), 'happy');
         });
       });
+    },
+
+    // Converter still not opened after 10 s (CONFIG.SLOW_NUDGE_MS)? Clippy explains double-clicking.
+    slowNudge(G) {
+      const zone = G.state.converterZone;
+      return !zone || !zone.isConnected ? G.line('doubleClick') : null;
     },
 
     check(G) {

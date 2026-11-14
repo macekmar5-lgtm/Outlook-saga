@@ -10,6 +10,7 @@
  *    Pass: cat is compressed.
  *
  *  ASSETS: cat.png, press.png (the press head/plate, ~240x90), file-photo.png
+ *  SOUND:  sounds/compressing.mp3 (plays when the cat is pressed flat)
  * ========================================================================== */
 
 (function () {
@@ -88,6 +89,7 @@
         // fully pressed: flat cat, 3 MB, press lifts off
         G.state.catCompressed = true;
         G.attachments.setSize('cat.jpg', '3 MB');
+        G.sound('compressing.mp3');
         G.shake();
         G.clippy.say(G.line('compressed'), 'happy');
         press.classList.add('locked');

@@ -413,6 +413,7 @@ canvas { display: block; }
 .tray-item.tray-keyboard { height: 32px; }
 .tray-icon.asset-missing { font-size: 5px; line-height: 6px; padding: 0; }
 #clock { font-size: 12px; padding: 0 2px; min-width: 58px; text-align: center; }
+#run-timer { font-size: 12px; padding: 0 6px; min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
 #clock.late { color: var(--clock-late-text); animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0.35; } }
 

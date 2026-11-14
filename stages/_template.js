@@ -37,7 +37,7 @@ Game.registerStage({
   // ---- texts ----
   vibe: 'annoyed',               // Clippy's mood: 'happy' | 'annoyed' | 'angry' | 'panic'
                                  // (leave out to pick automatically from game progress)
-  error: 'Recipient is in Do Not Disturb mode. So are you.',  // "Mail Delivery Failed" popup
+  error: 'Recipient is in Do Not Disturb mode. So are you.',  // "Mail Delivery Bounced" popup
   clippy: "You turned on Do Not Disturb. It's in the tray. Bottom right. Where it always is.",
   hint: 'Click the "DND" item in the taskbar tray, next to the clock.', // Clippy click (costs 1 min)
   retry: [                       // optional: Clippy's lines when Send fails again

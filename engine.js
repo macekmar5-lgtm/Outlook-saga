@@ -46,6 +46,12 @@ const CONFIG = {
   REAL_SECONDS_PER_MINUTE: 30,   // the clock also ticks by itself: 1 game minute per N real seconds
   WARNING_MINUTES_LEFT: 5,       // clock starts blinking when this few minutes are left
 
+  // ---- little extras ----
+  SLOW_NUDGE_MS: 10000,          // Clippy mocks you after this long without progress (and Clippy silent)
+  CONFIRM_CHANCE: 0.25,          // chance that SUBMIT asks "Are you sure?" first (never on the first send)
+  CONFIRM_AGAIN_CHANCE: 0.35,    // ...and after "Yes", the chance it asks AGAIN
+  EASTER_EGG_BONUS_MINUTES: 2,   // typing "hack club" / "game jam" in the subject gives this many minutes back
+
   // ---- Mail ----
   BOSS_ADDRESS: 'printer@company.com', // the boss is a grumpy printer
   PLAYER_ADDRESS: 'you@company.com',
@@ -64,7 +70,7 @@ const CONFIG = {
 
   // ---- Animation timings (ms) ----
   BOUNCE_MS: 1600,               // envelope flies out and bounces back
-  ERROR_SOUND_LEAD_MS: 900,      // start error.wav this long BEFORE the "Mail Delivery Failed" popup appears
+  ERROR_SOUND_LEAD_MS: 900,      // start error.wav this long BEFORE the "Mail Delivery Bounced" popup appears
   DELIVER_MS: 900,               // envelope flies out and never returns (final stage)
   LOADING_MS: 3000,              // loading screen after Start; then sounds/winxp.wav plays
 
@@ -120,7 +126,7 @@ window.Game = Game;
     vibe: null,        // Clippy's mood for this stage: happy | annoyed | angry | panic (null = auto)
     // Texts normally come from clippy-lines.js ("stages": { "<id>": {...} }).
     // These fields are only a fallback for stages that aren't in that file yet.
-    error: '',         // text in the "Mail Delivery Failed" popup
+    error: '',         // text in the "Mail Delivery Bounced" popup
     clippy: '',        // what Clippy says when the stage starts
     hint: '',          // what Clippy says when clicked (costs time)
     retry: null,       // optional array of lines Clippy says when Send fails again
@@ -1150,6 +1156,7 @@ window.Game = Game;
    *  but costs CONFIG.HINT_COST_MINUTES. His bubble is speech-bubble.png.
    * ======================================================================== */
   const MOODS = ['happy', 'annoyed', 'angry', 'panic'];
+  let slowIdleMs = 0; // time since the player last made progress / Clippy last spoke (see slowNudgeTick)
 
   Game.clippy = {
     mood: 'happy',
@@ -1165,6 +1172,7 @@ window.Game = Game;
         Game.setAsset(clippyImg, `clippy-${mood}.png`);
       }
       clippyEl.dataset.mood = mood;
+      slowIdleMs = 0; // he just talked: restart the "you're slow" timer
       bubbleText.textContent = text;
       bubble.classList.remove('hidden', 'pop');
       void bubble.offsetWidth;
@@ -1209,7 +1217,10 @@ window.Game = Game;
     get to() { return this.el.to.value; },
     set to(v) { this.el.to.value = v; },
     get subject() { return this.el.subject.value; },
-    set subject(v) { this.el.subject.value = v; },
+    set subject(v) {
+      this.el.subject.value = v;
+      checkEasterEggs(); // e.g. typed on stage 7's on-screen keyboard
+    },
     get body() { return this.el.body.value; },
     set body(v) {
       this.el.body.value = v;
@@ -1453,9 +1464,57 @@ window.Game = Game;
     },
   };
 
+  /* ---- Run timer: REAL time (speedrun style), shown in the taskbar next to the clock ----
+   * Starts when Outlook opens, stops when the email is delivered (or you're fired).
+   * Game.timer.ms, .text, .start(), .stop(), .format(ms), .best (fastest win, saved in
+   * this browser), .saveBest() -> true if this run is a new record. */
+  const BEST_KEY = 'outlook-saga-best-ms';
+  let runStart = 0;
+  let runEnd = 0;
+  let runTimerTick = null;
+  let fullRun = false; // only runs played from the title screen (no ?stage= / debug jumps) set a best time
+  function renderRunTimer() {
+    const el = $('#run-timer');
+    if (el) el.textContent = Game.timer.text;
+  }
+  Game.timer = {
+    get ms() { return runStart ? (runEnd || performance.now()) - runStart : 0; },
+    get text() { return Game.timer.format(Game.timer.ms); },
+    start() {
+      if (runStart) return;
+      runStart = performance.now();
+      runTimerTick = setInterval(renderRunTimer, 100);
+    },
+    stop() {
+      if (!runStart || runEnd) return;
+      runEnd = performance.now();
+      clearInterval(runTimerTick);
+      renderRunTimer();
+    },
+    format(ms) {
+      const tenths = Math.floor(ms / 100);
+      const m = Math.floor(tenths / 600);
+      const s = String(Math.floor(tenths / 10) % 60).padStart(2, '0');
+      return `${m}:${s}.${tenths % 10}`;
+    },
+    get best() {
+      try { const v = Number(localStorage.getItem(BEST_KEY)); return v > 0 ? v : null; } catch (e) { return null; }
+    },
+    /** true when this run started from the title screen with no debug jumps */
+    get fullRun() { return fullRun; },
+    saveBest() {
+      if (!fullRun) return false;
+      const best = Game.timer.best;
+      if (best && best <= Game.timer.ms) return false;
+      try { localStorage.setItem(BEST_KEY, String(Math.round(Game.timer.ms))); } catch (e) { /* private mode */ }
+      return true;
+    },
+  };
+
   function youreFired() {
     Game.over = true;
     Game.clock.stop();
+    Game.timer.stop();
     Game.sound('error.wav');
     Game.shake();
     Game.clippy.say(Game.line('general.fired'), 'angry');
@@ -1567,6 +1626,7 @@ window.Game = Game;
   async function send() {
     if (!Game.started || !Game.mailOpen || Game.over || sending || screen.classList.contains('blackout')) return;
     sending = true;
+    slowIdleMs = 0;
     root.classList.add('busy');
     Game.sound('send.wav');
     const statusBefore = Game.mail.status === 'Bounced. Obviously.' ? CONFIG.STATUS_TEXT : Game.mail.status;
@@ -1600,6 +1660,101 @@ window.Game = Game;
   }
   Game.send = send;
 
+  /* ---- SUBMIT button: sometimes asks "Are you sure?" first (CONFIG.CONFIRM_CHANCE) ----
+   * Only the button does this; Game.send() from stage code always sends straight away.
+   * The Yes/No buttons swap places at random. Texts: clippy-lines.js -> general.confirm */
+  let confirming = false;
+  function onSendClick() {
+    if (!Game.started || !Game.mailOpen || Game.over || sending || confirming) return;
+    if (!Game.stage || Math.random() >= CONFIG.CONFIRM_CHANCE) {
+      send();
+      return;
+    }
+    askSure(0);
+  }
+  function askSure(level) {
+    confirming = true;
+    let answered = false;
+    const questions = Game.line('general.confirm.questions');
+    const yes = () => {
+      answered = true;
+      if (level + 1 < questions.length && Math.random() < CONFIG.CONFIRM_AGAIN_CHANCE) {
+        askSure(level + 1);
+        return;
+      }
+      confirming = false;
+      send();
+    };
+    const no = () => {
+      answered = true;
+      confirming = false;
+      Game.clippy.say(pick(Game.line('general.confirm.clippyNo')), 'annoyed');
+    };
+    const buttons = [
+      { label: Game.line('general.confirm.yes'), onClick: yes },
+      { label: Game.line('general.confirm.no'), onClick: no },
+    ];
+    if (Math.random() < 0.5) buttons.reverse();
+    Game.popup({
+      title: Game.line('general.confirm.title'),
+      icon: 'warning',
+      text: questions[Math.min(level, questions.length - 1)],
+      buttons,
+      onClose: () => { if (!answered) no(); }, // the X counts as "No"
+    });
+  }
+
+  /* ---- Clippy gets impatient: after CONFIG.SLOW_NUDGE_MS of no progress ----
+   * The timer restarts whenever Clippy talks or you press Send, and pauses while
+   * a (modal) popup is open. Texts: clippy-lines.js -> general.slow.<mood> */
+  function slowNudgeTick(dt) {
+    if (!Game.started || Game.over || sending || confirming || document.hidden) return;
+    if (screen.classList.contains('blackout')) return;
+    if (document.querySelector('#layer-popups .popup-blocker:not(.passthrough)')) return;
+    slowIdleMs += dt;
+    if (slowIdleMs < CONFIG.SLOW_NUDGE_MS) return;
+    const stage = Game.stage;
+    const mood = !Game.mailOpen || !stage ? 'happy' : stage.vibe || autoMood(stage);
+    // A stage can say its own thing instead: slowNudge(G) returns a line, or nothing for the generic one.
+    if (Game.mailOpen && stage && typeof stage.slowNudge === 'function') {
+      let own = null;
+      try { own = stage.slowNudge(Game); } catch (err) { console.error(`[Game] Stage ${stage.id} slowNudge() crashed:`, err); }
+      if (own) {
+        Game.clippy.say(own, mood);
+        return;
+      }
+    }
+    const lines = Game.line(!Game.mailOpen ? 'general.slow.outlook' : 'general.slow.' + mood);
+    Game.clippy.say(Array.isArray(lines) ? pick(lines) : lines, mood); // resets slowIdleMs
+  }
+
+  /* ---- Easter eggs: "hack club" / "game jam" in the subject ----
+   * Each one fires once per game: a happy popup, Clippy cheers, and the clock
+   * gives back CONFIG.EASTER_EGG_BONUS_MINUTES. Spaces/caps/dashes don't matter.
+   * Texts: clippy-lines.js -> general.easterEggs.<key>  Sound: sounds/easter-egg.wav */
+  const EASTER_EGGS = ['hackclub', 'gamejam'];
+  const easterEggsFound = new Set();
+  function checkEasterEggs() {
+    if (!Game.started || Game.over || !Game.mail.el.subject) return;
+    const typed = Game.mail.el.subject.value.toLowerCase().replace(/[^a-z]/g, '');
+    EASTER_EGGS.forEach((key) => {
+      if (!typed.includes(key) || easterEggsFound.has(key)) return;
+      easterEggsFound.add(key);
+      const minutes = CONFIG.EASTER_EGG_BONUS_MINUTES;
+      Game.sound('easter-egg.wav');
+      Game.popup({
+        title: Game.line(`general.easterEggs.${key}.title`),
+        icon: 'info',
+        text: Game.line(`general.easterEggs.${key}.text`, { minutes }),
+        modal: false,
+        buttons: [{ label: Game.line(`general.easterEggs.${key}.button`) }],
+      });
+      setTimeout(() => Game.mail.el.subject.focus(), 20); // keep typing (the popup grabs focus)
+      Game.clock.add(-minutes);
+      Game.clippy.say(Game.line(`general.easterEggs.${key}.clippy`, { minutes }), 'happy');
+    });
+  }
+
   function startStage(index) {
     const stage = Game.stages[index];
     if (!stage) {
@@ -1615,6 +1770,7 @@ window.Game = Game;
     if (stage.final) {
       Game.over = true; // the final stage owns the screen from here on
       Game.clock.stop();
+      Game.timer.stop();
       if (!safeCall(stage, 'setup')) deliveredFallback();
       return;
     }
@@ -1626,7 +1782,7 @@ window.Game = Game;
     const stub = stage.todo || stage._broken;
     playErrorSound();
     Game.popup({
-      title: 'Mail Delivery Failed',
+      title: 'Mail Delivery Bounced',
       icon: 'error',
       text:
         `Your message to ${Game.mail.to} could not be delivered.\n\n` +
@@ -1646,7 +1802,7 @@ window.Game = Game;
     const stage = Game.stage;
     playErrorSound();
     Game.popup({
-      title: 'Mail Delivery Failed (again)',
+      title: 'Mail Delivery Bounced (again)',
       icon: 'warning',
       text: `Your message bounced. Again.\n\nReason: ${reason || stage.error}`,
     });
@@ -1681,6 +1837,7 @@ window.Game = Game;
   function deliveredFallback() {
     Game.over = true;
     Game.clock.stop();
+    Game.timer.stop();
     Game.stage = null;
     Game.popup({
       title: 'Outlook Saga',
@@ -1712,12 +1869,14 @@ window.Game = Game;
       console.table(Game.stages.map((s) => ({ id: s.id, name: s.name, todo: s.todo, final: s.final })));
     },
     skip() {
+      fullRun = false;
       if (!Game.started) startGame(true);
       const i = Game.stageIndex;
       finishStage();
       startStage(i + 1);
     },
     goto(id) {
+      fullRun = false;
       const i = Game.stages.findIndex((s) => s.id === id);
       if (i === -1) {
         console.warn(`[Game] No stage with id ${id}. Loaded:`, Game.stages.map((s) => s.id).join(', '));
@@ -1823,6 +1982,8 @@ window.Game = Game;
     $('#task-mail').classList.remove('hidden');
     Game.bringToFront(win);
     Game.clock.start();
+    fullRun = !quiet;
+    Game.timer.start();
     if (!quiet) Game.clippy.say(Game.line('general.greeting'), 'happy');
   }
   Game.openMail = openMail;
@@ -1879,7 +2040,14 @@ window.Game = Game;
     m.body.value = CONFIG.DEFAULT_BODY;
     m.status.textContent = CONFIG.STATUS_TEXT;
     m.body.addEventListener('input', Game.mail.updateCounter);
-    m.send.addEventListener('click', send);
+    m.subject.addEventListener('input', checkEasterEggs);
+    m.send.addEventListener('click', onSendClick);
+    let lastNudgeTick = performance.now();
+    setInterval(() => {
+      const now = performance.now();
+      slowNudgeTick(now - lastNudgeTick);
+      lastNudgeTick = now;
+    }, 250);
     Game.mail.updateCounter();
     renderAttachBar();
     renderBounces();

@@ -120,9 +120,9 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
 - **Send**: "Sending..." bar, envelope flies out and bounces back (`bounce.wav`), Bounced
   counter +1, costs 1 minute.
   - no active stage → start the first stage
-  - active stage, `check()` fails → "Mail Delivery Failed (again)" popup + annoyed Clippy
+  - active stage, `check()` fails → "Mail Delivery Bounced (again)" popup + annoyed Clippy
   - `check()` passes → `cleanup()` + tracked cleanups → start next stage
-- **Starting a stage**: `setup()`, then the "Mail Delivery Failed" popup (`error.wav`) with
+- **Starting a stage**: `setup()`, then the "Mail Delivery Bounced" popup (`error.wav`) with
   `error`, and Clippy says `clippy` in mood `vibe`.
 - `todo: true` stage = stub: popup adds "[stage not built yet]" and the next Send auto-passes.
 - If `setup()` throws, the stage is treated like a stub. If `check()` throws, it passes.
@@ -131,6 +131,13 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
   screen. check/cleanup never run.
 - Clock hits 9:00 → "You're fired" → `Game.restart()` (page reload).
 - Clicking Clippy shows the current stage's `hint` and costs 1 minute.
+- **Extras (engine, numbers in CONFIG):** SUBMIT sometimes asks "Are you sure?" first
+  (`CONFIRM_CHANCE`, never on the first send; `Game.send()` from code never asks). Clippy mocks
+  you after `SLOW_NUDGE_MS` (10 s) without progress — the timer resets when he talks or you send,
+  pauses during modal popups (`general.slow.<mood>`). Typing "hack club" / "game jam" in the subject
+  (any caps/spacing) shows an achievement popup once and gives back `EASTER_EGG_BONUS_MINUTES`
+  (`general.easterEggs`). Stage 18: after "delivered", the printer's reply flies into the Inbox, then
+  the blue screen.
 - All numbers live in `CONFIG` at the top of engine.js. Timing budget: 17 bounces minimum +
   the clock ticking every 30 s — that's why the clock starts at 8:00, not 8:30.
 
@@ -159,7 +166,7 @@ Game.registerStage({
   id: 7,                       // order (number)
   name: 'Keyboard disconnected',
   vibe: 'annoyed',             // Clippy mood: 'happy' | 'annoyed' | 'angry' | 'panic' (omit = auto)
-  error: 'Popup text.',        // "Mail Delivery Failed" reason
+  error: 'Popup text.',        // "Mail Delivery Bounced" reason
   clippy: 'Clippy line when the stage starts.',
   hint: 'Clippy line when clicked (costs a minute).',
   retry: ['optional lines', 'when Send fails again'],
@@ -169,6 +176,7 @@ Game.registerStage({
   setup(G) {},                 // build the problem (G === Game)
   check(G) { return true; },   // true = fixed | false | 'reason string' (shown in the popup)
   cleanup(G) {},               // undo what isn't auto-tracked
+  slowNudge(G) { return null; }, // optional: Clippy's line after 10 s idle (null = generic)
 });
 ```
 
@@ -215,6 +223,7 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 | Clippy | `clippy.say(text, mood)`, `clippy.hide()`, `clippy.mood` |
 | Text | `line('key', vars)` (current stage's `lines`), `line('general.x.y', vars)` (any path); stage fields `textVars`, `lines` (fallbacks if clippy-lines.js has no entry) |
 | Clock | `clock.add(min)`, `clock.minutes`, `clock.minutesLeft`, `clock.start/stop/freeze/disableDeadline()` |
+| Run timer | `timer.ms / text / start() / stop() / format(ms)`, `timer.best`, `timer.saveBest()` (true = new record; only full runs from the title screen count). Real time, shown in the taskbar next to the clock; starts when Outlook opens, stops on delivered/fired |
 | Cleanup | `track(fn)`, `on(target, type, fn, opts)`, `timeout(fn, ms)`, `interval(fn, ms)` |
 | Misc | `state` {}, `stage`, `stages`, `stageIndex`, `over`, `bounces`, `layers.{icons,windows,highlight,popups,fx,overlay}`, `make(tag, cls, text)`, `CONFIG` |
 
