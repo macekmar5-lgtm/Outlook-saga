@@ -1,5 +1,5 @@
 /* =============================================================================
- *  STAGE 11 — Signature required                                 STATUS: TODO
+ *  STAGE 11 — Signature required                                 STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
  *    A "Digital Signature Pad" window opens with a white drawing canvas. The
@@ -35,7 +35,6 @@
 Game.registerStage({
   id: 11,
   name: 'Signature',
-  todo: true, // <- delete this line once setup/check are implemented
   vibe: 'angry',
   error: 'Signature required. Unsigned emails could be from anyone. Even you.',
   clippy: "The server wants a signature. Draw something. Anything. I'm not judging. (I am judging.)",
@@ -43,15 +42,79 @@ Game.registerStage({
   assets: ['signature-pad.png'],
 
   setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
+    G.state.signed = false;
+    const win = G.openWindow({ title: 'Digital Signature Pad', w: 520, h: 350,
+      x: 380, y: 180, closable: false });
+    const pad = G.make('div');
+    Object.assign(pad.style, { position: 'relative', width: '480px', height: '200px' });
+    pad.append(G.asset('signature-pad.png', { w: 480, h: 200 }));
+    const canvas = G.make('canvas');
+    canvas.width = 480;
+    canvas.height = 200;
+    canvas.setAttribute('aria-label', 'Draw your signature here');
+    Object.assign(canvas.style, { position: 'absolute', inset: '0', width: '480px',
+      height: '200px', touchAction: 'none' });
+    pad.append(canvas);
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = getComputedStyle(G.mail.el.body).color;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    let pointer = null;
+    let points = 0;
+    const status = G.make('p', '', 'Draw a signature, then press Sign.');
+    const point = e => {
+      const p = G.toGame(e);
+      const r = G.rectOf(canvas);
+      return { x: (p.x - r.x) * canvas.width / r.w, y: (p.y - r.y) * canvas.height / r.h };
+    };
+    G.on(canvas, 'pointerdown', e => {
+      if (e.button !== 0 || pointer !== null) return;
+      e.preventDefault();
+      pointer = e.pointerId;
+      canvas.setPointerCapture(pointer);
+      const p = point(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    });
+    G.on(canvas, 'pointermove', e => {
+      if (pointer !== e.pointerId) return;
+      const p = point(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      points++;
+      status.textContent = points < 20 ? 'Keep signing...' : 'Signature ready. Press Sign.';
+    });
+    const stop = e => {
+      if (pointer !== e.pointerId) return;
+      if (canvas.hasPointerCapture(pointer)) canvas.releasePointerCapture(pointer);
+      pointer = null;
+    };
+    G.on(canvas, 'pointerup', stop);
+    G.on(canvas, 'pointercancel', stop);
+    G.on(canvas, 'lostpointercapture', stop);
+    const actions = G.make('div');
+    Object.assign(actions.style, { display: 'flex', gap: '8px' });
+    actions.append(G.ui.button('Clear', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      points = 0;
+      status.textContent = 'Cleared. Draw your signature again.';
+    }), G.ui.button('Sign', () => {
+      if (points < 20) { status.textContent = "That's a dot. Sign properly (draw a longer line)."; return; }
+      G.state.signed = true;
+      win.close();
+      const popup = G.popup({ title: 'Signature Server', icon: 'info',
+        text: points > 150 ? 'Signature is a novel. Accepted. Barely.' : 'Is that a horse? Accepted. Barely.' });
+      G.track(popup.close);
+    }));
+    win.body.append(pad, status, actions);
   },
 
   check(G) {
-    // TODO
-    return true;
+    return G.state.signed || 'The email is not signed. Draw on the pad and press Sign.';
   },
 
   cleanup(G) {
-    // TODO
+    delete G.state.signed;
   },
 });
