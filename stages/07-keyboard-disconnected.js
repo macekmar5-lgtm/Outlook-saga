@@ -1,5 +1,5 @@
 /* =============================================================================
- *  STAGE 7 — Keyboard disconnected                               STATUS: TODO
+ *  STAGE 7 — Keyboard disconnected                               STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
  *    The real keyboard stops working (every key press is blocked) and the
@@ -34,7 +34,6 @@
 Game.registerStage({
   id: 7,
   name: 'Keyboard disconnected',
-  todo: true, // <- delete this line once setup/check are implemented
   vibe: 'annoyed',
   error: 'Keyboard disconnected. Subject line lost.',
   clippy: 'Your keyboard has left the building. Good news: I made you a new one! I sorted the keys myself.',
@@ -42,15 +41,39 @@ Game.registerStage({
   assets: ['key.png', 'key-pressed.png'],
 
   setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
+    G.mail.subject = '';
+    let kb;
+    const block = e => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (kb) G.bringToFront(kb.el);
+    };
+    G.on(window, 'keydown', block, true);
+    G.on(G.mail.el.subject, 'beforeinput', block);
+    G.on(G.mail.el.subject, 'paste', block);
+    G.on(G.mail.el.subject, 'drop', block);
+    const wasReadOnly = G.mail.el.subject.readOnly;
+    G.mail.el.subject.readOnly = true;
+    G.track(() => { G.mail.el.subject.readOnly = wasReadOnly; });
+    kb = G.openWindow({ title: 'On-Screen Keyboard (Recovered)',
+      x: 260, y: 400, w: 700, h: 250, closable: false });
+    G.addIcon({ id: 'keyboard', label: 'On-screen keyboard', asset: 'key.png',
+      x: 1060, y: 40, onClick: () => G.bringToFront(kb.el) });
+    const preview = G.make('div', '', 'Subject: (type at least 3 letters)');
+    preview.style.marginBottom = '8px';
+    const keys = G.make('div');
+    Object.assign(keys.style, { display: 'flex', flexWrap: 'wrap', gap: '4px' });
+    const update = () => { preview.textContent = 'Subject: ' + (G.mail.subject || '(empty)'); };
+    // Alphabetical, backwards. Clippy considers this an ergonomic breakthrough.
+    'ZYXWVUTSRQPONMLKJIHGFEDCBA'.split('').forEach(letter => {
+      keys.append(G.ui.key(letter, () => { G.mail.subject += letter.toLowerCase(); update(); }));
+    });
+    keys.append(G.ui.key('Space', () => { G.mail.subject += ' '; update(); }),
+      G.ui.key('Backspace', () => { G.mail.subject = G.mail.subject.slice(0, -1); update(); }));
+    kb.body.append(preview, keys);
   },
 
   check(G) {
-    // TODO
-    return true;
-  },
-
-  cleanup(G) {
-    // TODO
+    return (G.mail.subject.match(/[a-z]/gi) || []).length >= 3 || 'Use the on-screen keyboard to enter at least three letters.';
   },
 });

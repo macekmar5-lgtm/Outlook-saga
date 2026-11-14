@@ -1,5 +1,5 @@
 /* =============================================================================
- *  STAGE 8 — Attachments must be one zipped folder               STATUS: TODO
+ *  STAGE 8 — Attachments must be one zipped folder               STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
  *    The server wants all attachments in ONE .zip. A zip folder icon appears
@@ -32,7 +32,6 @@
 Game.registerStage({
   id: 8,
   name: 'Zip folder',
-  todo: true, // <- delete this line once setup/check are implemented
   vibe: 'annoyed',
   error: 'Attachments must be sent as one zipped folder.',
   clippy: 'Loose files? Ew. Zip them up like a professional. Like me. I am very zipped.',
@@ -40,15 +39,66 @@ Game.registerStage({
   assets: ['icon-zip.png', 'file-photo.png', 'file-doc.png'],
 
   setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
+    G.state.zipped = [];
+    G.attachments.remove('attachments.zip');
+    if (!G.attachments.list().length) G.attachments.add('cat.png', '12 KB', 'file-photo.png');
+    if (G.attachments.list().length < 2) G.attachments.add('excuse.doc', '2 KB', 'file-doc.png');
+    const zip = G.addIcon({ id: 'zip', label: 'attachments.zip (0 files)',
+      asset: 'icon-zip.png', x: 1060, y: 40, onClick: () => {
+        if (G.attachments.get('attachments.zip')) return;
+        if (G.attachments.list().length || !G.state.zipped.length) {
+          G.clippy.say('Drag every loose attachment onto this folder first.', 'annoyed');
+          return;
+        }
+        G.attachments.add('attachments.zip', '3 KB', 'icon-zip.png');
+        G.clippy.say('One zip. Finally, some organisation. Press Send.', 'annoyed');
+      } });
+    G.attachments.list().forEach(attachment => {
+      const chip = attachment.el;
+      // Lift dragged chips over the mail window so they can reach the desktop.
+      const originalStyle = chip.getAttribute('style');
+      let placeholder;
+      const restore = () => {
+        if (!placeholder) return;
+        placeholder.replaceWith(chip);
+        placeholder = null;
+        if (originalStyle === null) chip.removeAttribute('style');
+        else chip.setAttribute('style', originalStyle);
+      };
+      const drag = G.makeDraggable(chip, { revert: true,
+        onStart() {
+          const r = G.rectOf(chip);
+          placeholder = G.make('div');
+          Object.assign(placeholder.style, { width: r.w + 'px', height: r.h + 'px' });
+          chip.replaceWith(placeholder);
+          G.layers.fx.append(chip);
+          Object.assign(chip.style, { position: 'absolute', left: r.x + 'px', top: r.y + 'px',
+            width: r.w + 'px', height: r.h + 'px' });
+        },
+        onDrop() {
+          if (!G.overlaps(chip, zip)) {
+            restore();
+            return false;
+          }
+          G.state.zipped.push(attachment.name);
+          if (placeholder) placeholder.remove();
+          placeholder = null;
+          G.attachments.remove(attachment.name);
+          zip.querySelector('.desktop-icon-label').textContent =
+            'attachments.zip (' + G.state.zipped.length + ' files)';
+          return true;
+        }
+      });
+      G.track(() => { drag.destroy(); restore(); drag.reset(); });
+    });
   },
 
   check(G) {
-    // TODO
-    return true;
+    const list = G.attachments.list();
+    return (list.length === 1 && list[0].name === 'attachments.zip') || 'Attach ONE zip folder and nothing else.';
   },
 
   cleanup(G) {
-    // TODO
+    delete G.state.zipped;
   },
 });

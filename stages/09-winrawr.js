@@ -1,5 +1,5 @@
 /* =============================================================================
- *  STAGE 9 — WinRAWR license exceeded                            STATUS: TODO
+ *  STAGE 9 — WinRAWR license exceeded                            STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
  *    A WinRAWR nag window pops up over the Send button: "Your 40-day trial
@@ -33,7 +33,6 @@
 Game.registerStage({
   id: 9,
   name: 'WinRAWR',
-  todo: true, // <- delete this line once setup/check are implemented
   vibe: 'annoyed',
   error: 'WinRAWR license exceeded. Zipped attachments cannot be sent.',
   clippy: 'Ah, WinRAWR. Everyone has a free trial. Nobody has ever bought it. Nobody. Ever.',
@@ -41,15 +40,38 @@ Game.registerStage({
   assets: ['winrawr-logo.png'],
 
   setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
+    G.state.winrawrDismissed = false;
+    const win = G.openWindow({ title: 'WinRAWR - Trial Expired', closable: false,
+      x: 230, y: 40, w: 440, h: 340 });
+    const logo = G.asset('winrawr-logo.png', { w: 110, h: 90 });
+    const text = G.make('p', '', 'Your 40-day trial expired 3,652 days ago. Please buy WinRAWR.');
+    const buy = G.ui.button('Buy now (EUR 49.99)', () => {
+      G.clippy.say('Payment declined. Your card is also late.', 'annoyed');
+    });
+    Object.assign(buy.style, { position: 'absolute', left: '20px', top: '170px', width: '180px' });
+    const trial = G.ui.button('Continue trial', () => {
+      G.state.winrawrDismissed = true;
+      win.close();
+      G.clippy.say('Continuing trial. Like every human who ever lived. Send it again.', 'annoyed');
+    });
+    Object.assign(trial.style, { position: 'absolute', left: '20px', bottom: '12px', fontSize: '11px' });
+    win.body.append(logo, text, buy, trial);
+    let right = false;
+    G.on(win.body, 'pointermove', e => {
+      const p = G.toGame(e);
+      const r = G.rectOf(buy);
+      if (p.x < r.x - 18 || p.x > r.x + r.w + 18 || p.y < r.y - 18 || p.y > r.y + r.h + 18) return;
+      right = !right;
+      buy.style.left = right ? '220px' : '20px';
+      buy.style.top = right ? '210px' : '170px';
+    });
   },
 
   check(G) {
-    // TODO
-    return true;
+    return G.state.winrawrDismissed || 'WinRAWR is still nagging you. Continue the trial.';
   },
 
   cleanup(G) {
-    // TODO
+    delete G.state.winrawrDismissed;
   },
 });
