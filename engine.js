@@ -1413,6 +1413,13 @@ window.Game = Game;
     $('.xp-tb-max', m.window).addEventListener('click', () =>
       Game.clippy.say('It is already as big as your excuse.', 'annoyed')
     );
+    // Decorative bits in the mail window (art: ad-banner.png, user-avatar.png)
+    $('#ad-banner').addEventListener('click', () => {
+      if (Game.started && !Game.over) Game.clippy.say('Join later. You are LATE, remember?', 'annoyed');
+    });
+    $('#user-avatar').addEventListener('click', () => {
+      if (Game.started && !Game.over) Game.clippy.say("That's you. You look like someone who's late.", 'happy');
+    });
 
     // ---- taskbar ----
     clockEl = $('#clock');
