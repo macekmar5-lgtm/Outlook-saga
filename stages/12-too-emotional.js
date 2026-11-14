@@ -1,5 +1,5 @@
 /* =============================================================================
- *  STAGE 12 — Email is too emotional                             STATUS: TODO
+ *  STAGE 12 — Email is too emotional                             STATUS: DONE
  *  -----------------------------------------------------------------------------
  *  WHAT THE PLAYER MUST DO
  *    The email body has become shouty ("WHY is the bus ALWAYS late!!!") and a
@@ -31,7 +31,6 @@
 Game.registerStage({
   id: 12,
   name: 'Too emotional',
-  todo: true, // <- delete this line once setup/check are implemented
   vibe: 'angry',
   error: 'Email is too emotional. Mood analysis: 87% anger.',
   clippy: '87% ANGER?? Who taught you to write like this?! Calm. Down. NOW. Like me. I am VERY CALM.',
@@ -39,15 +38,62 @@ Game.registerStage({
   assets: ['mood-meter.png', 'mood-needle.png'],
 
   setup(G) {
-    // TODO: see IMPLEMENTATION PLAN above
+    G.state.anger = 87;
+    const textarea = G.mail.el.body;
+    const display = textarea.style.display;
+    const overlay = G.make('div', 'stage12-emotional-body');
+    Object.assign(overlay.style, { flex: '1', minWidth: '0', overflow: 'auto',
+      whiteSpace: 'pre-wrap', font: '15px/1.5 Arial, sans-serif', padding: '6px' });
+    const meter = G.openWindow({ title: 'Mood Meter', x: 990, y: 40, w: 260, h: 240, closable: false });
+    const dial = G.make('div');
+    Object.assign(dial.style, { position: 'relative', width: '220px', height: '120px' });
+    dial.append(G.asset('mood-meter.png', { w: 220, h: 120 }));
+    const needle = G.asset('mood-needle.png', { w: 18, h: 90 });
+    Object.assign(needle.style, { position: 'absolute', left: '101px', top: '12px', transformOrigin: '50% 90%' });
+    dial.append(needle);
+    const reading = G.make('div', 'stage12-anger');
+    reading.setAttribute('aria-live', 'polite');
+    const update = () => {
+      reading.textContent = G.state.anger + '% ANGER' + (G.state.anger <= 20 ? ' / Ready to send' : ' / Target: 20% or less');
+      needle.style.transform = 'rotate(' + (-70 + G.state.anger * 1.4) + 'deg)';
+      G.mail.body = overlay.textContent;
+    };
+    meter.body.append(dial, reading, G.make('p', '', 'Click the underlined words in your email to calm them down.'));
+    const parts = ['Dear printer,\n\n', ['WHY', 'why'], ' is the bus ', ['ALWAYS', 'always'],
+      ' late', ['!!!', '.'], ' I ', ['HATE', 'mildly dislike'], ' the ', ['TRAFFIC', 'traffic'],
+      '. It ', ['NEVER', 'rarely'], ' moves', ['!!!', '.'], '\n\nI will arrive as soon as I can.\nBest regards,\nMe'];
+    parts.forEach(part => {
+      if (typeof part === 'string') { overlay.append(document.createTextNode(part)); return; }
+      const word = G.make('span', 'stage12-shouty clickable', part[0]);
+      word.tabIndex = 0;
+      word.setAttribute('role', 'button');
+      word.setAttribute('aria-label', 'Calm ' + part[0]);
+      Object.assign(word.style, { textDecoration: 'underline', fontWeight: 'bold' });
+      const calm = () => {
+        if (!word.isConnected) return;
+        word.replaceWith(document.createTextNode(part[1]));
+        G.state.anger = Math.max(0, G.state.anger - 10);
+        update();
+      };
+      G.on(word, 'click', calm);
+      G.on(word, 'keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); calm(); }
+      });
+      overlay.append(word);
+    });
+    textarea.style.display = 'none';
+    G.mail.el.bodyWrap.append(overlay);
+    G.track(() => { overlay.remove(); textarea.style.display = display; });
+    update();
   },
 
   check(G) {
-    // TODO
-    return true;
+    return G.state.anger <= 20 || 'Anger is still at ' + G.state.anger + '%. Calm the underlined words down to 20% or less.';
   },
 
   cleanup(G) {
-    // TODO
+    const overlay = G.mail.el.bodyWrap.querySelector('.stage12-emotional-body');
+    G.mail.body = overlay.textContent;
+    delete G.state.anger;
   },
 });
