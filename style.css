@@ -53,6 +53,7 @@
     "btn-close.png" "btn-minimize.png" "btn-maximize.png"
     "button.png" "button-pressed.png" "input-box.png"
     "taskbar.png" "start-button.png" "taskbar-button.png" "tray.png"
+    "btn-send.png" "btn-send-pressed.png"
     "attachment-chip.png" "clippy-bubble.png" "highlight-frame.png"
     "key.png" "key-pressed.png" "checkbox.png" "checkbox-checked.png"
     "progress-bar.png" "progress-fill.png"
@@ -398,7 +399,9 @@ input, textarea {
 .mail-menubar span { padding: 2px 7px; }
 
 .mail-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; }
-.send-btn { height: 36px; min-width: 96px; margin-right: 10px; font-size: 15px; font-weight: bold; }
+.send-btn { height: 40px; width: 110px; margin-right: 10px; font-size: 15px; font-weight: bold; }
+/* btn-send.png (110x40) has its own "SUBMIT" label drawn in: hide the text once the art exists */
+#game.skin-btn-send .send-btn { font-size: 0; }
 
 #ad-banner { width: 120px; height: 44px; margin-left: auto; }
 
