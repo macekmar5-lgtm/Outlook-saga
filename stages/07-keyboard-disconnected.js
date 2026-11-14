@@ -42,7 +42,10 @@
       G.on(document, 'beforeinput', block, true);
       G.on(document, 'paste', block, true);
       G.on(document, 'drop', block, true);
-      G.tray.add('keyboard', 'Keyboard disconnected', null, { icon: 'tray-keyboard-off.png', text: 'Keyboard disconnected' });
+      // tray-keyboard-off.png is a wide picture (500x200) -> a bigger, wide box
+      G.tray.add('keyboard', 'Keyboard disconnected', null, {
+        icon: 'tray-keyboard-off.png', iconW: 70, iconH: 28, text: 'Keyboard disconnected',
+      });
 
       // --- on-screen keyboard ---
       const win = G.openWindow({ title: 'On-Screen Keyboard (Recovered)', x: 250, y: 300, w: 720, h: 250, closable: false });

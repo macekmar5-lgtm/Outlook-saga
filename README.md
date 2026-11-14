@@ -131,6 +131,7 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 ### Title, desktop, Clippy
 - [x] `title-logo.png`: title screen logo (600×200)
 - [ ] `title-background.png`: title screen background (1280×720)
+- [ ] `loading-screen.png`: the 3-second loading screen after Start (1280×720; the "Starting dihdows xp" text and the progress bar sit near the bottom)
 - [x] `wallpaper.png`: desktop (1280×680)
 - [x] `envelope.png`: flies out and bounces back (64×48)
 - [x] `clippy-happy.png`, [x] `clippy-annoyed.png`, [x] `clippy-angry.png`, [x] `clippy-panic.png`: 128×128
@@ -184,7 +185,9 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 - 18: [ ] `bluescreen-bg.png` (1280×720), [ ] `bluescreen-face.png` (200×170)
 
 ### Sounds (`assets/sounds/`)
-- [ ] `send.wav`, [ ] `bounce.wav`, [ ] `error.wav`, [ ] `clippy.wav`, [ ] `bluescreen.wav`
+- [ ] `send.wav`, [ ] `bounce.wav` (must be in `assets/sounds/`), [x] `error.wav`, [x] `bluescreen.wav`
+- [x] `winxp.wav`: plays when the loading screen ends and the desktop appears
+- Clippy has **no** sound (on purpose), so `clippy.wav` isn't used.
 
 ---
 

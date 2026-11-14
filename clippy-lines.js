@@ -19,7 +19,9 @@
 // =============================================================================
 Game.lines = {
   "general": {
-    "greeting": "Hi! It looks like you're late for work. Write the printer a quick email and press Send!",
+    "bootIntro": "Good morning! Well... it's 8:00 and you're not at work. Your boss (yes, the office printer. Long story.) expects you at your desk by 9:00. Let's email it an excuse. Open Outlook Saga — top left of the desktop!",
+    "openOutlookFirst": "Not now! First things first: open Outlook Saga. It's the icon at the top left of the desktop.",
+    "greeting": "There it is! Write the printer a quick email and press Send. What could possibly go wrong?",
     "noStageHint": "Just write the printer an email and press Send. I believe in you!",
     "hint": "Hint: {hint}\n\n(That hint cost you {minutes} min.)",
     "fired": "It's 9:00. The printer has printed your resignation letter. Single-sided. Out of spite.",

@@ -38,7 +38,8 @@
         <div id="layer-windows" class="layer">
 
           <!-- ===== The Outlook Saga mail client ===== -->
-          <div id="mail-window" class="xp-window" data-skin="window-frame.png">
+          <!-- hidden at boot: opens when the player clicks the Outlook Saga desktop icon -->
+          <div id="mail-window" class="xp-window hidden" data-skin="window-frame.png">
             <div class="xp-titlebar" data-skin="titlebar.png">
               <div class="asset xp-title-icon" data-asset="app-icon.png"></div>
               <span class="xp-title">Outlook Saga - New Message</span>
@@ -127,7 +128,7 @@
         <div id="taskbar" data-skin="taskbar.png">
           <button id="start-button" data-skin="start-button.png" aria-label="start"></button>
           <div id="taskbar-tasks">
-            <button id="task-mail" class="task-button" data-skin="taskbar-button.png">
+            <button id="task-mail" class="task-button hidden" data-skin="taskbar-button.png">
               <span class="asset" data-asset="app-icon.png" style="width:16px;height:16px"></span>
               <span>Outlook Saga</span>
             </button>
@@ -144,6 +145,12 @@
       <div id="layer-popups" class="layer"></div>
       <div id="layer-fx" class="layer"></div>
       <div id="layer-overlay" class="layer"></div>
+
+      <!-- ================= LOADING SCREEN (after Start, CONFIG.LOADING_MS) ================= -->
+      <div id="loading-screen" class="hidden" data-skin="loading-screen.png">
+        <div class="loading-text">Starting dihdows xp</div>
+        <div id="loading-bar-slot"></div>
+      </div>
 
       <!-- ================= TITLE SCREEN ================= -->
       <div id="title-screen" data-skin="title-background.png">

@@ -62,7 +62,7 @@ Game.registerStage({
     const item = G.tray.add('dnd', 'Do Not Disturb', () => {
       G.state.dnd = !G.state.dnd;
       G.tray.setIcon('dnd', G.state.dnd ? 'tray-dnd-on.png' : 'tray-dnd.png');
-      G.sound('clippy.wav'); // any file in assets/sounds/ — silently does nothing if missing
+      G.sound('bounce.wav', 0.4); // any file in assets/sounds/ — silently does nothing if missing
     }, { icon: 'tray-dnd-on.png' });
 
     // Tracked timer: cancelled automatically when the stage ends.

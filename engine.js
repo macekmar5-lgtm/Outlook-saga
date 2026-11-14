@@ -64,7 +64,9 @@ const CONFIG = {
 
   // ---- Animation timings (ms) ----
   BOUNCE_MS: 1600,               // envelope flies out and bounces back
+  ERROR_SOUND_LEAD_MS: 900,      // start error.wav this long BEFORE the "Mail Delivery Failed" popup appears
   DELIVER_MS: 900,               // envelope flies out and never returns (final stage)
+  LOADING_MS: 3000,              // loading screen after Start; then sounds/winxp.wav plays
 };
 
 /* =============================================================================
@@ -79,6 +81,7 @@ const Game = {
   started: false,   // true once the player pressed Start on the title screen
   over: false,      // true after being fired or reaching the final stage
   bounces: 0,       // how many times the email bounced (shown on the Bounced folder)
+  mailOpen: false,  // the Outlook Saga window is closed at boot; the player opens it from the desktop
   scale: 1,         // current screen scale factor (set by fit())
   layers: {},       // DOM layers: icons, windows, highlight, popups, fx, overlay (filled by init)
   lines: {},        // ALL texts (Clippy, errors, hints) — filled by clippy-lines.js
@@ -851,9 +854,10 @@ window.Game = Game;
 
   // ---- system tray (bottom right of the taskbar) ----
   /**
-   * Game.tray.add(id, label, onClick, { icon, text, title, persist })
+   * Game.tray.add(id, label, onClick, { icon, iconW, iconH, text, title, persist })
    *   label: name shown as the tooltip
    *   icon:  picture, default 'tray-<id>.png'   (swap with Game.tray.setIcon)
+   *   iconW / iconH: icon size in px (default 20 x 20)
    *   text:  optional text next to the icon     (change with Game.tray.setText)
    * Built-in items: 'volume', 'wifi', 'battery' (persistent — if your stage
    * changes them, put them back in cleanup).
@@ -866,7 +870,7 @@ window.Game = Game;
       item.dataset.id = id;
       item.title = opts.title || label || id;
       item.append(
-        Game.asset(opts.icon || `tray-${id}.png`, { w: 20, h: 20, className: 'tray-icon' }),
+        Game.asset(opts.icon || `tray-${id}.png`, { w: opts.iconW || 20, h: opts.iconH || 20, className: 'tray-icon' }),
         make('span', 'tray-text', opts.text || '')
       );
       if (onClick) {
@@ -1153,8 +1157,7 @@ window.Game = Game;
       bubbleText.textContent = text;
       bubble.classList.remove('hidden', 'pop');
       void bubble.offsetWidth;
-      bubble.classList.add('pop');
-      Game.sound('clippy.wav');
+      bubble.classList.add('pop'); // (Clippy is silent on purpose: no sound when he talks)
     },
     hide() {
       bubble.classList.add('hidden');
@@ -1163,6 +1166,10 @@ window.Game = Game;
 
   function onClippyClick() {
     if (!Game.started || Game.over) return;
+    if (!Game.mailOpen) {
+      Game.clippy.say(Game.line('general.openOutlookFirst')); // free: no time cost before Outlook is open
+      return;
+    }
     const stage = Game.stage;
     if (!stage || !stage.hint) {
       Game.clippy.say(Game.line('general.noStageHint'));
@@ -1543,9 +1550,11 @@ window.Game = Game;
     });
   }
 
+  let errorSoundQueued = false; // send() started error.wav early; the popup shouldn't play it again
+
   /** The Send button. Also available as Game.send() for stages. */
   async function send() {
-    if (!Game.started || Game.over || sending || screen.classList.contains('blackout')) return;
+    if (!Game.started || !Game.mailOpen || Game.over || sending || screen.classList.contains('blackout')) return;
     sending = true;
     root.classList.add('busy');
     Game.sound('send.wav');
@@ -1559,6 +1568,11 @@ window.Game = Game;
     const delivered = outcome.pass && (!next || next.final);
 
     if (!delivered) Game.clock.add(CONFIG.SEND_COST_MINUTES);
+    if (!delivered && !Game.over) {
+      // The popup comes when the envelope lands; start error.wav a bit earlier so it lines up.
+      errorSoundQueued = true;
+      setTimeout(() => Game.sound('error.wav'), Math.max(0, CONFIG.BOUNCE_MS - CONFIG.ERROR_SOUND_LEAD_MS));
+    }
     if (!Game.over) await flyEnvelope(!delivered);
 
     sending = false;
@@ -1599,7 +1613,7 @@ window.Game = Game;
     }
 
     const stub = stage.todo || stage._broken;
-    Game.sound('error.wav');
+    playErrorSound();
     Game.popup({
       title: 'Mail Delivery Failed',
       icon: 'error',
@@ -1611,9 +1625,15 @@ window.Game = Game;
     Game.clippy.say(stage.clippy || '...', stage.vibe || autoMood(stage));
   }
 
+  /** error.wav for the popup — unless send() already started it early (ERROR_SOUND_LEAD_MS). */
+  function playErrorSound() {
+    if (errorSoundQueued) errorSoundQueued = false;
+    else Game.sound('error.wav'); // e.g. ?stage=N / debug jumps, where there was no send
+  }
+
   function stillFailed(reason) {
     const stage = Game.stage;
-    Game.sound('error.wav');
+    playErrorSound();
     Game.popup({
       title: 'Mail Delivery Failed (again)',
       icon: 'warning',
@@ -1704,13 +1724,71 @@ window.Game = Game;
   /* ===========================================================================
    *  12. BOOT
    * ======================================================================== */
+  let loading = false;
+
+  /**
+   * Start button: title -> loading screen (CONFIG.LOADING_MS, a filling bar) ->
+   * desktop + winxp.wav + Clippy's greeting. The clock only starts after loading.
+   * quiet = true (debug jumps like ?stage=N) skips the loading screen and the sound.
+   */
   function startGame(quiet) {
     if (Game.started) return;
-    Game.started = true;
     $('#title-screen').classList.add('hidden');
+    if (quiet) {
+      beginPlay(true);
+      return;
+    }
+    if (loading) return;
+    loading = true;
+    const screenEl = $('#loading-screen');
+    const bar = Game.ui.progress(0);
+    $('#loading-bar-slot').replaceChildren(bar);
+    screenEl.classList.remove('hidden');
+    Game.runProgress(bar, CONFIG.LOADING_MS).then(() => {
+      screenEl.classList.add('hidden');
+      loading = false;
+      if (Game.started) return; // a debug jump happened meanwhile
+      Game.sound('winxp.wav');
+      beginPlay(false);
+    });
+  }
+
+  let stopOutlookHighlight = null;
+
+  /**
+   * After loading: the desktop "boots" with Outlook closed. Clippy explains why
+   * you're here and only the Outlook Saga icon works. quiet (debug jumps) opens
+   * Outlook straight away.
+   */
+  function beginPlay(quiet) {
+    if (Game.started) return;
+    Game.started = true;
+    $('#loading-screen').classList.add('hidden');
+    if (quiet) {
+      openMail(true);
+      return;
+    }
+    Game.clippy.say(Game.line('general.bootIntro'), 'happy');
+    stopOutlookHighlight = Game.highlight('#icon-outlook', 0);
+  }
+
+  /** Open the Outlook Saga window (desktop icon / taskbar). Starts the 9:00 clock the first time. */
+  function openMail(quiet) {
+    const win = Game.mail.el.window;
+    if (Game.mailOpen) {
+      Game.bringToFront(win);
+      return;
+    }
+    Game.mailOpen = true;
+    if (stopOutlookHighlight) stopOutlookHighlight();
+    win.classList.remove('hidden');
+    win.classList.add('opening');
+    $('#task-mail').classList.remove('hidden');
+    Game.bringToFront(win);
     Game.clock.start();
     if (!quiet) Game.clippy.say(Game.line('general.greeting'), 'happy');
   }
+  Game.openMail = openMail;
 
   function init() {
     // Texts: clippy-lines.js must have loaded (and be valid JSON) before this point.
@@ -1786,7 +1864,15 @@ window.Game = Game;
     clockEl = $('#clock');
     trayIcons = $('#tray-icons');
     renderClock();
-    $('#start-button').addEventListener('click', () => talk(Game.line('general.startButton')));
+    // Until Outlook is open, everything except the Outlook icon just gets "open Outlook first".
+    const needsOutlook = (fn) => (...args) => {
+      if (Game.started && !Game.mailOpen) {
+        talk(Game.line('general.openOutlookFirst'), 'happy');
+        return;
+      }
+      fn(...args);
+    };
+    $('#start-button').addEventListener('click', needsOutlook(() => talk(Game.line('general.startButton'))));
     $('#task-mail').addEventListener('click', () => Game.bringToFront(m.window));
     // Built-in tray icons (added right-to-left). Stages change them with
     // Game.tray.setIcon / setText — and put them back in cleanup.
@@ -1797,11 +1883,11 @@ window.Game = Game;
     // ---- default desktop icons (persist for the whole game) ----
     Game.addIcon({
       id: 'outlook', label: 'Outlook Saga', asset: 'app-icon.png', x: 16, y: 16, persist: true,
-      onClick: () => Game.bringToFront(m.window),
+      onClick: () => { if (Game.started && !Game.over) openMail(); },
     });
     // Desktop "apps": plain (empty) app windows — non-modal, draggable, one per app.
-    const desktopApp = (id, title, icon, x, y) => () =>
-      Game.openApp({ id, title, icon, x, y, w: 360, h: 200, persist: true });
+    const desktopApp = (id, title, icon, x, y) => needsOutlook(() =>
+      Game.openApp({ id, title, icon, x, y, w: 360, h: 200, persist: true }));
     Game.addIcon({
       id: 'my-computer', label: 'My Computer', asset: 'icon-my-computer.png', x: 16, y: 106, persist: true,
       onClick: desktopApp('my-computer', 'My Computer', 'icon-my-computer.png', 150, 90),

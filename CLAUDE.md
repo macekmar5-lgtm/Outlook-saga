@@ -109,7 +109,14 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
 
 ## Game flow (engine.js section 10)
 
-- Email starts with an EMPTY subject. Title screen → Start → clock starts (8:00; deadline 9:00).
+- Email starts with an EMPTY subject. Title screen → Start → loading screen (`loading-screen.png`,
+  progress bar, `CONFIG.LOADING_MS` = 3 s) → `winxp.wav` → desktop "boots" with Outlook CLOSED:
+  Clippy explains (`general.bootIntro`), the Outlook icon pulses, everything else answers
+  `general.openOutlookFirst` → clicking the Outlook icon calls `Game.openMail()` → mail window
+  + taskbar button appear, Clippy says `general.greeting`, the clock starts (8:00; deadline 9:00).
+  `Game.mailOpen` tracks this; Send does nothing until it's true. `?stage=N` debug jumps skip the
+  loading screen and open Outlook immediately.
+- `CONFIG.ERROR_SOUND_LEAD_MS` starts `error.wav` that long before the bounce popup appears.
 - **Send**: "Sending..." bar, envelope flies out and bounces back (`bounce.wav`), Bounced
   counter +1, costs 1 minute.
   - no active stage → start the first stage

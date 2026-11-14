@@ -61,7 +61,7 @@
     "checkbox.png" "checkbox-checked.png"
     "progress-bar.png" "progress-fill.png"
     "captcha-frame.png" "drop-zone.png"
-    "title-background.png" "bluescreen-bg.png"
+    "title-background.png" "loading-screen.png" "bluescreen-bg.png"
     /* PICTURES (Game.asset) — icons */
     "app-icon.png" "saga-logo.png"
     "tb-new.png" "tb-reply.png" "tb-attach.png" "tb-delete.png" "tb-settings.png"
@@ -201,6 +201,7 @@ canvas { display: block; }
 #layer-fx > *    { pointer-events: none; }
 #layer-overlay   { z-index: 30; }
 #title-screen    { z-index: 40; }
+#loading-screen  { z-index: 45; }
 
 /* -----------------------------------------------------------------------------
  *  3. MISSING-ART PLACEHOLDERS  (dev-time only)
@@ -407,6 +408,8 @@ canvas { display: block; }
 #tray-icons { display: flex; align-items: center; gap: 4px; }
 .tray-item { display: flex; align-items: center; gap: 3px; height: 24px; padding: 0 2px; font-size: 11px; font-weight: bold; white-space: nowrap; }
 .tray-icon { width: 20px; height: 20px; }
+/* stage 7: its tray icon is bigger (size set in the stage via iconW/iconH) */
+.tray-item.tray-keyboard { height: 32px; }
 .tray-icon.asset-missing { font-size: 5px; line-height: 6px; padding: 0; }
 #clock { font-size: 12px; padding: 0 2px; min-width: 58px; text-align: center; }
 #clock.late { color: var(--clock-late-text); animation: blink 1s steps(2) infinite; }
@@ -419,6 +422,7 @@ canvas { display: block; }
  *     pictures: app-icon, saga-logo, tb-*, folder-*, ad-banner, user-avatar
  * -------------------------------------------------------------------------- */
 #mail-window { left: 116px; top: 6px; width: 914px; height: 668px; }
+#mail-window.opening { animation: popup-in 0.2s ease-out; } /* when the player opens Outlook */
 
 /* toolbar */
 .mail-toolbar { flex: none; display: flex; align-items: center; gap: 4px; height: 58px; padding: 4px 8px; }
@@ -565,6 +569,21 @@ canvas { display: block; }
 #start-game { height: 50px; min-width: 210px; font-size: 22px; font-weight: bold; }
 .title-tagline { font-size: 15px; letter-spacing: 0.5px; }
 
+/* Loading screen after Start (skin: loading-screen.png, bar: progress-bar/progress-fill) */
+#loading-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding-bottom: 150px;
+}
+.loading-text { font-size: 16px; letter-spacing: 0.5px; }
+#loading-bar-slot { width: 320px; }
+#loading-bar-slot .ui-progress { height: 18px; }
+
 /* Blue screen (built by stages/18-final-bluescreen.js) */
 .bsod {
   position: absolute;
@@ -620,6 +639,7 @@ canvas { display: block; }
 #game.skin-taskbar #taskbar                  { color: var(--taskbar-text); }
 #game.skin-wallpaper .desktop-icon-label     { color: var(--desktop-text); }
 #game.skin-title-background .title-tagline   { color: var(--title-text); }
+#game.skin-loading-screen .loading-text      { color: var(--title-text); }
 #game.skin-bluescreen-bg .bsod               { color: var(--bsod-text); }
 
 /* -----------------------------------------------------------------------------
