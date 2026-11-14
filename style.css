@@ -489,6 +489,8 @@ canvas { display: block; }
 .bsod-progress { margin: 0 0 40px; font-size: 28px; }
 .bsod-small { font-size: 16px; line-height: 1.7; }
 .bsod-restart { margin-top: 28px; font-size: 18px; animation: blink 1s steps(2) infinite; }
+.final-send-bar { height: 18px; margin-top: 14px; }
+.final-send-step { margin-top: 6px; }
 
 
 #game {

@@ -4,7 +4,7 @@ Game jam game (theme: **BOUNCE BACK**). A fake Windows-XP-style desktop runs a t
 email client, **Outlook Saga**. The player has to send ONE email to their boss — a grumpy
 **printer** (`printer@company.com`) — explaining why they're late. Every Send bounces back
 with a new absurd error (16 playable stages). Clippy delivers each error and gets more
-unhinged. Stage 18: "delivered" → fake blue screen → the end.
+unhinged. Stage 18: it finally sends (progress bar) → 24 stacked error sounds → fake blue screen → the end.
 
 3–4 people edit **different stage files at the same time**. Keep changes local to the file
 you were asked to work on.
@@ -137,8 +137,7 @@ skipped; stages are sorted by `id` (decimals like 7.5 are allowed).
   you after `SLOW_NUDGE_MS` (10 s) without progress — the timer resets when he talks or you send,
   pauses during modal popups (`general.slow.<mood>`). Typing "hack club" / "game jam" in the subject
   (any caps/spacing) shows an achievement popup once and gives back `EASTER_EGG_BONUS_MINUTES`
-  (`general.easterEggs`). Stage 18: after "delivered", the printer's reply flies into the Inbox, then
-  the blue screen.
+  (`general.easterEggs`). Stage 18: a "Sending..." progress bar finally fills, then 24 error.wav stack up 0.1 s apart and the blue screen hits (no bluescreen.wav).
 - All numbers live in `CONFIG` at the top of engine.js. Timing budget: 16 bounces minimum +
   the clock ticking every 30 s — that's why the clock starts at 8:00, not 8:30.
 

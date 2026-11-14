@@ -55,7 +55,7 @@ Open each link (from the project folder), fail the stage once by pressing SUBMIT
 | 15 | `index.html?stage=15&nodeadline=1` | Type a username and press **Create** repeatedly; each try reveals a rule. `Bounce8kiwiMayprinter` passes all 7. From changes to your username. |
 | 16 | `index.html?stage=16&nodeadline=1` | Bus captcha (London street, 4×4 squares). Select the 6 squares with the red buses (the 3 middle-row squares on the right + the 3 below them; NOT the black cabs) → **Verify**. Skip or wrong squares fail. |
 | 17 | `index.html?stage=17&nodeadline=1` | Wifi is off. Drag the **network cable** (under the left edge of the mail window) onto the **wall socket** (bottom left). |
-| 18 | `index.html?stage=18` | "Email delivered successfully", then the blue screen. Any key after a few seconds restarts. |
+| 18 | `index.html?stage=18` | A "Sending..." window with a progress bar fills up, then 24 error sounds stack (0.1 s apart, no blue screen sound) and the blue screen appears. Any key after a few seconds restarts. |
 
 Full run: `index.html` → Start → play 1 to 18 without debug flags. The clock starts at 8:00;
 you're fired at 9:00. Each bounce costs 1 minute, a hint costs 1, and the clock ticks every 30 s.
@@ -190,7 +190,6 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 - [x] `fan.wav`: PC fan, loops the whole game; loud when you press Start, then fades to a quiet hum (`FAN_*` in CONFIG)
 - [x] `compressing.mp3`: stage 4, plays when the hydraulic press squishes the cat all the way flat
 - [ ] `easter-egg.wav`: typing "hack club" / "game jam" in the subject (achievement popup)
-- [x] `new-mail.mp3`: stage 18, the printer's reply lands in the Inbox
 - [ ] `empty-bin.wav`: stage 3, emptying the Recycle Bin
 - Clippy has **no** sound (on purpose), so `clippy.wav` isn't used.
 

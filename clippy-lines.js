@@ -320,11 +320,7 @@ Game.lines = {
     "18": {
       "clippy": "Finally! Let me just optimize one tiny thing...",
       "lines": {
-        "delivered": "It... didn't bounce. IT DIDN'T BOUNCE! Wait. Something's coming back...",
-        "replyTitle": "New message from {boss}",
-        "replyText": "From: {boss}\nSubject: RE: {subject}\n\nPC LOAD LETTER.\n\n(Translation: \"Received. You are still late. See you at 9:00.\")\n\n-- Sent from my fax machine",
-        "replyButton": "Close",
-        "replied": "The printer REPLIED! For once something bounced back that isn't an error. I'm so proud of us."
+        "sending": "It... didn't bounce. IT DIDN'T BOUNCE! It's actually sending! Don't touch anything. Don't even breathe."
       }
     }
   }
