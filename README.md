@@ -186,7 +186,7 @@ Extensions".)
 
 ### Stage art (`assets/`)
 - [x] Stage 3: `file-photo.png`, `file-doc.png`, `file-exe.png` (attachment icons, 20×20); `trash-empty.png`, `trash-full.png` (desktop icon, 48×48)
-- [ ] Stage 4: `cat.png`, `cat-squished.png` (≈300×220)
+- [x] Stage 4: `cat.png`, `cat-squished.png` (≈300×220)
 - [ ] Stage 6: `icon-converter.png` (48×48)
 - [ ] Stage 8: `icon-zip.png` (48×48)
 - [ ] Stage 9: `winrawr-logo.png` (≈120×120)
@@ -204,6 +204,8 @@ Extensions".)
 - [ ] `error.wav`: Mail Delivery Failed popup
 - [ ] `clippy.wav`: Clippy talks
 - [ ] `bluescreen.wav`: the final crash
+- [ ] `trash.wav`: stage 3, a file lands in the Recycle Bin
+- [ ] `squish.wav`: stage 4, the cat gets compressed
 
 ---
 
