@@ -88,8 +88,8 @@
   /* ---- text colours (text is font-rendered; pick colours that read on your art).
           Until the art exists, text stays --text so it reads on the placeholders. */
   --text: #000;
-  --titlebar-text: #fff;
-  --taskbar-text: #fff;
+  --titlebar-text: #000;   /* our titlebar.png is light */
+  --taskbar-text: #000;    /* our taskbar.png is light grey */
   --desktop-text: #fff;
   --title-text: #fff;
   --bsod-text: #fff;
@@ -169,7 +169,8 @@ input, textarea {
 .layer > * { pointer-events: auto; }
 
 #desktop { position: absolute; inset: 0; }
-#wallpaper { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; }
+/* wallpaper.png is 1280x680: exactly the desktop area above the 40px taskbar */
+#wallpaper { position: absolute; left: 0; top: 0; width: 1280px; height: 680px; }
 #layer-icons     { z-index: 1; }
 #layer-windows   { z-index: 2; }
 #clippy          { z-index: 4; }
@@ -362,7 +363,12 @@ input, textarea {
   align-items: stretch;
 }
 #taskbar::after { left: 600px; }
-#start-button { width: 110px; flex: none; }
+/* start-button.png is 120x40: the negative margins let it cover the taskbar's frame edge
+   so it shows at its real size instead of being squeezed inside the frame */
+#start-button { width: 120px; flex: none; }
+#game.skin-taskbar #start-button {
+  margin: calc(-1 * var(--frame-taskbar)) 0 calc(-1 * var(--frame-taskbar)) calc(-1 * var(--frame-taskbar));
+}
 #taskbar-tasks { flex: 1; display: flex; gap: 4px; padding: 5px 8px; }
 .task-button {
   width: 190px;
@@ -394,14 +400,18 @@ input, textarea {
 .mail-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; }
 .send-btn { height: 36px; min-width: 96px; margin-right: 10px; font-size: 15px; font-weight: bold; }
 
+#ad-banner { width: 120px; height: 44px; margin-left: auto; }
+
 .mail-fields {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 64px 1fr 72px;
   align-items: center;
   gap: 5px 8px;
   padding: 6px 12px 4px;
 }
-.mail-fields label { text-align: right; font-size: 12px; }
+.mail-fields label { grid-column: 1; text-align: right; font-size: 12px; }
+.mail-fields .ui-field { grid-column: 2; }
+#user-avatar { grid-column: 3; grid-row: 1 / span 3; width: 64px; height: 64px; justify-self: end; }
 
 .mail-attachments {
   display: flex;
@@ -501,7 +511,7 @@ input, textarea {
   justify-content: center;
   gap: 28px;
 }
-#title-logo { width: 640px; height: 320px; }
+#title-logo { width: 600px; height: 200px; } /* title-logo.png is 600x200 */
 #start-game { height: 50px; min-width: 210px; font-size: 22px; font-weight: bold; }
 .title-tagline { font-size: 15px; letter-spacing: 0.5px; }
 
