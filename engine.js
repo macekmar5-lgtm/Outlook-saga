@@ -404,6 +404,7 @@ window.Game = Game;
       row.append(box, make('span', 'ui-checkbox-label', label));
       row.setChecked = (v) => {
         row.checked = !!v;
+        row.classList.toggle('is-checked', row.checked); // text shows the state too (CSS)
         Game.setSkin(box, row.checked ? 'checkbox-checked.png' : 'checkbox.png');
       };
       row.addEventListener('click', (e) => {

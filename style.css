@@ -34,7 +34,8 @@
  *               Missing file = dashed box with the filename on it.
  *   PICTURES  — Game.asset('file.png') / data-asset="file.png": an <img>,
  *               scaled to fit. Missing file = dashed box with the filename.
- *   CURSORS   — CSS cursor: url(); if missing, the normal system cursor.
+ *   CURSORS   — cursor.png is used everywhere once it exists; cursor-hand / text-cursor /
+ *               cursor-loading replace it in their spots when they exist (section 11).
  *
  *  Files are loaded by filename; a JPG/WebP/AVIF saved as .png still works.
  *  (HEIC does not: run tools/fix-art.ps1.)
@@ -108,11 +109,13 @@
   --bsod-text: #fff;
   --clock-late-text: #ff3030;
   --clickable-word-text: #c00000;
+  --rule-fail-text: #c00000;   /* stage 15 password rules */
+  --rule-pass-text: #007a00;
 
   /* ---- cursor hotspots: "x y" in pixels inside the cursor image ---- */
-  --hotspot-cursor: 0 0;
-  --hotspot-cursor-hand: 6 0;
-  --hotspot-cursor-loading: 16 16;
+  --hotspot-cursor: 2 2;          /* tip of the arrow in cursor.png */
+  --hotspot-cursor-hand: 10 6;    /* fingertip in cursor-hand.png */
+  --hotspot-cursor-loading: 14 18; /* centre of cursor-loading.png */
   --hotspot-text-cursor: 16 16;
 
   /* ---- dev-only look of MISSING art (vanishes once the file exists).
@@ -347,6 +350,7 @@ canvas { display: block; }
 .ui-checkbox.read-only { pointer-events: none; }
 .ui-checkbox-box { width: 16px; height: 16px; flex: none; }
 .ui-checkbox-box::after { font-size: 5px; line-height: 6px; left: 1px; }
+.ui-checkbox.is-checked .ui-checkbox-label { font-weight: bold; }
 
 .ui-progress { height: 20px; width: 100%; }
 .ui-progress-fill { height: 100%; width: 0; }
@@ -577,24 +581,32 @@ canvas { display: block; }
 /* -----------------------------------------------------------------------------
  *  11. CURSORS — our art when it exists, otherwise the normal system cursor
  * -------------------------------------------------------------------------- */
-#game { cursor: default; }
-#game :is(button, .clickable, .desktop-icon, #clippy-img, .draggable) { cursor: pointer; }
-#game :is(input:not([readonly]), textarea) { cursor: text; }
-#game button:disabled { cursor: default; }
-
-#game.skin-cursor,
-#game.skin-cursor * { cursor: var(--img-cursor) var(--hotspot-cursor), default; }
-#game.skin-cursor :is(input:not([readonly]), textarea) { cursor: text; }
-#game.skin-text-cursor :is(input:not([readonly]), textarea) { cursor: var(--img-text-cursor) var(--hotspot-text-cursor), text; }
-#game.skin-cursor-hand :is(button, .clickable, .desktop-icon, #clippy-img, .draggable) {
-  cursor: var(--img-cursor-hand) var(--hotspot-cursor-hand), pointer;
+/* Four cursor "slots". Each uses its own art if it exists; otherwise, as soon as
+   cursor.png exists, it uses cursor.png (so the system cursor never shows);
+   with no cursor art at all it falls back to the normal system cursor. */
+#game {
+  --cur-default: default;
+  --cur-hand: pointer;
+  --cur-text: text;
+  --cur-busy: progress;
 }
-#game.skin-cursor button:disabled { cursor: var(--img-cursor) var(--hotspot-cursor), default; }
+#game.skin-cursor {
+  --cur-default: var(--img-cursor) var(--hotspot-cursor), default;
+  --cur-hand: var(--img-cursor) var(--hotspot-cursor), default;
+  --cur-text: var(--img-cursor) var(--hotspot-cursor), default;
+  --cur-busy: var(--img-cursor) var(--hotspot-cursor), default;
+}
+#game.skin-cursor-hand    { --cur-hand: var(--img-cursor-hand) var(--hotspot-cursor-hand), pointer; }
+#game.skin-text-cursor    { --cur-text: var(--img-text-cursor) var(--hotspot-text-cursor), text; }
+#game.skin-cursor-loading { --cur-busy: var(--img-cursor-loading) var(--hotspot-cursor-loading), progress; }
 
+#game, #game * { cursor: var(--cur-default); }
+/* :where() keeps these at the same strength as the line above, so order decides */
+#game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .captcha-tile, .sig-pad canvas) { cursor: var(--cur-hand); }
+#game :where(input:not([readonly]), textarea) { cursor: var(--cur-text); }
+#game :where(button:disabled, .ui-checkbox.read-only) { cursor: var(--cur-default); }
 /* busy (while the envelope is flying) — keep last so it wins */
-#game.busy, #game.busy * { cursor: progress !important; }
-#game.busy.skin-cursor-loading,
-#game.busy.skin-cursor-loading * { cursor: var(--img-cursor-loading) var(--hotspot-cursor-loading), progress !important; }
+#game.busy, #game.busy * { cursor: var(--cur-busy) !important; }
 
 /* -----------------------------------------------------------------------------
  *  12. TEXT COLOURS ONCE THE ART EXISTS
@@ -634,7 +646,7 @@ canvas { display: block; }
 
 /* stage 11: signature pad (signature-pad.png under a drawing canvas) */
 .sig-pad { position: relative; width: 480px; height: 200px; }
-.sig-pad > canvas { position: absolute; inset: 0; cursor: crosshair; }
+.sig-pad > canvas { position: absolute; inset: 0; }
 
 /* stage 12: mood meter (mood-meter.png + rotating mood-needle.png) */
 .mood-dial { position: relative; width: 200px; height: 110px; margin: 0 auto; }
@@ -650,6 +662,9 @@ canvas { display: block; }
 
 /* stage 15: account form */
 .rule-list { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+/* rule state is also shown in the text colour (readable even without checkbox art) */
+.rule-list .ui-checkbox { color: var(--rule-fail-text); }
+.rule-list .ui-checkbox.is-checked { color: var(--rule-pass-text); }
 
 /* stage 16: captcha (captcha-frame.png, boss-N.png, checkbox overlays) */
 .captcha-grid { display: grid; grid-template-columns: repeat(3, 116px); gap: 6px; padding: 10px; justify-content: center; }
