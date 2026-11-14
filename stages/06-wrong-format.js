@@ -1,16 +1,3 @@
-/* =============================================================================
- *  STAGE 6 — Photo attachments in the wrong format               STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    The printer only reads PNG. A "Convertinator 3000" icon appears on the
- *    desktop (top right). Double-click it: a window with a drop zone opens.
- *    Drag the cat.jpg chip from the email into the drop zone: a progress bar
- *    runs with silly steps, then the attachment is renamed cat.png.
- *    Pass: no attachment ends in .jpg.
- *
- *  ASSETS: icon-converter.png, drop-zone.png, progress-bar.png, progress-fill.png
- * ========================================================================== */
-
 (function () {
   const STEPS = ['Removing the J...', 'Adding the N...', 'Polishing pixels...', 'Done!'];
   const isJpg = (name) => /\.jpe?g$/i.test(name);
@@ -19,12 +6,12 @@
     const win = G.openApp({
       id: 'converter', title: 'Convertinator 3000 (Trial)', icon: 'icon-converter.png',
       x: 690, y: 300, w: 330, h: 290,
-      alwaysOnTop: true, // clicking the email must not hide it behind the mail window
+      alwaysOnTop: true,
     });
     if (!win.created) return;
 
     const col = G.make('div', 'stage-col');
-    const zone = G.make('div', 'drop-zone'); // no text: "Drop files here" is drawn in drop-zone.png
+    const zone = G.make('div', 'drop-zone');
     G.setSkin(zone, 'drop-zone.png');
     const bar = G.ui.progress(0);
     bar.classList.add('hidden');
@@ -39,7 +26,6 @@
     id: 6,
     name: 'Wrong format',
     vibe: 'happy',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "6"
     assets: ['icon-converter.png', 'drop-zone.png', 'progress-bar.png', 'progress-fill.png'],
 
     setup(G) {
@@ -72,7 +58,6 @@
       });
     },
 
-    // Converter still not opened after 10 s (CONFIG.SLOW_NUDGE_MS)? Clippy explains double-clicking.
     slowNudge(G) {
       const zone = G.state.converterZone;
       return !zone || !zone.isConnected ? G.line('doubleClick') : null;

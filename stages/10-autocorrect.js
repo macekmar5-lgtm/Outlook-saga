@@ -1,23 +1,9 @@
-/* =============================================================================
- *  STAGE 10 — Autocorrect improved your email                    STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    "Autocorrect" inserted "sorry" after about every 4th word (at least 8x).
- *    The body becomes a clickable word view (Game.wordView). Click each red
- *    "sorry" to delete it — but every 3rd one comes back as "apologies", which
- *    must also be clicked away.  Pass: no "sorry" or "apologies" left.
- *    Cleanup: the normal textarea returns with the cleaned text.
- *
- *  ASSETS: none (text only; uses the body-paper.png body)
- * ========================================================================== */
-
 (function () {
   const MIN_SORRIES = 8;
   const FILLER =
     '\n\nI really feel terrible about the delay and the bus and the alarm clock and the fridge ' +
     'and basically everything else that happened this morning before I left the house.';
 
-  /** Remove token i and the whitespace token in front of it. */
   function removeToken(view, i) {
     const before = view.tokens[i - 1];
     if (before && !before.tag && /^\s+$/.test(before.text)) view.tokens.splice(i - 1, 2);
@@ -28,7 +14,6 @@
     id: 10,
     name: 'Autocorrect',
     vibe: 'angry',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "10"
     assets: [],
 
     setup(G) {
@@ -39,7 +24,6 @@
         tokens = Game.wordView.split(body);
       }
 
-      // Insert " sorry" after every 4th word.
       const out = [];
       let words = 0;
       tokens.forEach((t) => {
@@ -71,7 +55,7 @@
     },
 
     cleanup(G) {
-      G.state.sorryView.close(); // writes the cleaned text back and restores the textarea
+      G.state.sorryView.close();
       delete G.state.sorryView;
     },
   });

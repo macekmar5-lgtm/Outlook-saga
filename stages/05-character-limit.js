@@ -1,15 +1,3 @@
-/* =============================================================================
- *  STAGE 5 — Email exceeds the character limit                   STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    Clippy "helpfully" added a huge paragraph to the body (life story, bus
- *    timetable, an apology to the printer), so it's ~1400 characters. The live
- *    counter under the body shows "1400 / 500" in red. Delete text normally.
- *    Pass: body length between 20 and 500 characters.
- *
- *  ASSETS: char-counter-bg.png (shared mail client art)
- * ========================================================================== */
-
 (function () {
   const LIMIT = 500;
   const MIN = 20;
@@ -33,8 +21,7 @@
     id: 5,
     name: 'Character limit',
     vibe: 'happy',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "5"
-    textVars: { limit: LIMIT, min: MIN }, // fills {limit} / {min} in those texts
+    textVars: { limit: LIMIT, min: MIN },
     assets: ['char-counter-bg.png'],
 
     setup(G) {

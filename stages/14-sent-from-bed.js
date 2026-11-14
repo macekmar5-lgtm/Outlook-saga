@@ -1,17 +1,3 @@
-/* =============================================================================
- *  STAGE 14 — Sending from bed                                   STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    A "Webcam" icon appears on the desktop (top right). Open it: the webcam
- *    shows you in bed (webcam-bed.png). Press "Background effects" and pick:
- *      None   -> just you, in bed
- *      Blur   -> blurry bed ("Still a bed. Just a blurry bed.")
- *      Office -> webcam-office.png
- *    Pass: Office background is active.
- *
- *  ASSETS: icon-webcam.png, webcam-bed.png, webcam-office.png
- * ========================================================================== */
-
 (function () {
   function openWebcam(G) {
     const win = G.openApp({ id: 'webcam', title: 'Webcam - LIVE', icon: 'icon-webcam.png', x: 560, y: 90, w: 460, h: 440 });
@@ -47,7 +33,6 @@
     id: 14,
     name: 'Sent from bed',
     vibe: 'panic',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "14"
     assets: ['icon-webcam.png', 'webcam-bed.png', 'webcam-office.png'],
 
     setup(G) {

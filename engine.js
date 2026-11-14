@@ -1,59 +1,22 @@
-/* =============================================================================
- *  OUTLOOK SAGA — engine.js
- *  -----------------------------------------------------------------------------
- *  The game engine. It creates ONE global object, `Game`, which every stage file
- *  talks to. Load order (see index.html):
- *
- *      engine.js  ->  stages/01-*.js ... stages/18-*.js  ->  DOMContentLoaded -> init()
- *
- *  Sections in this file:
- *     1. CONFIG ............ all tunable numbers (clock, costs, paths, timings)
- *     2. Core state + stage registry
- *     3. Screen scaling + coordinates
- *     4. Art (pictures + skins), UI kit & sound
- *     5. Stage-scoped cleanup (Game.track & friends)
- *     6. UI helpers (popups, windows, apps, icons, props, tray, drag, juice)
- *     7. Clippy
- *     8. Mail (fields, attachments, word view, status bar, Bounced counter)
- *     9. Clock
- *    10. Game flow (send -> bounce -> stages -> ending)
- *    11. Debug tools
- *    12. Boot
- *
- *  Several people write stages against this API at the same time:
- *  DON'T rename or remove public Game.* functions. Adding new ones is fine.
- *  Read CLAUDE.md for the rules. The big one: EVERY visual is a hand-made file
- *  in /assets. No generated images, no SVG, no CSS-drawn graphics (gradients,
- *  shadows, rounded corners, coloured boxes). Use Game.asset() for pictures and
- *  data-skin / Game.ui.* for surfaces (frames, buttons, fields...).
- * ========================================================================== */
 'use strict';
 
-/* =============================================================================
- *  1. CONFIG — tune the game here
- * ========================================================================== */
 const CONFIG = {
-  // ---- Screen (the game is always this size, scaled to fit the window) ----
   WIDTH: 1280,
   HEIGHT: 720,
 
-  // ---- Clock (in minutes after midnight) ----
-  START_TIME: 8 * 60,            // 8:00 — the clock starts here. (8:30 was unwinnable: 18 stages =
-                                 //  18+ bounces = 18+ minutes, plus the clock ticking on its own.)
-  DEADLINE: 9 * 60,              // 9:00 — "You're fired"
-  SEND_COST_MINUTES: 1,          // every press of Send costs this much
-  HINT_COST_MINUTES: 1,          // every click on Clippy (hint) costs this much
-  REAL_SECONDS_PER_MINUTE: 30,   // the clock also ticks by itself: 1 game minute per N real seconds
-  WARNING_MINUTES_LEFT: 5,       // clock starts blinking when this few minutes are left
+  START_TIME: 8 * 60,
+  DEADLINE: 9 * 60,
+  SEND_COST_MINUTES: 1,
+  HINT_COST_MINUTES: 1,
+  REAL_SECONDS_PER_MINUTE: 30,
+  WARNING_MINUTES_LEFT: 5,
 
-  // ---- little extras ----
-  SLOW_NUDGE_MS: 10000,          // Clippy mocks you after this long without progress (and Clippy silent)
-  CONFIRM_CHANCE: 0.25,          // chance that SUBMIT asks "Are you sure?" first (never on the first send)
-  CONFIRM_AGAIN_CHANCE: 0.35,    // ...and after "Yes", the chance it asks AGAIN
-  EASTER_EGG_BONUS_MINUTES: 2,   // typing "hack club" / "game jam" in the subject gives this many minutes back
+  SLOW_NUDGE_MS: 10000,
+  CONFIRM_CHANCE: 0.25,
+  CONFIRM_AGAIN_CHANCE: 0.35,
+  EASTER_EGG_BONUS_MINUTES: 2,
 
-  // ---- Mail ----
-  BOSS_ADDRESS: 'printer@company.com', // the boss is a grumpy printer
+  BOSS_ADDRESS: 'printer@company.com',
   PLAYER_ADDRESS: 'you@company.com',
   DEFAULT_BODY:
     'Dear Printer,\n\n' +
@@ -63,62 +26,51 @@ const CONFIG = {
     'Best regards,\nMe',
   STATUS_TEXT: 'Connected (barely)',
 
-  // ---- Paths (RELATIVE on purpose: a leading "/" breaks file:// and itch.io) ----
   ASSET_PATH: 'assets/',
   SOUND_PATH: 'assets/sounds/',
-  MASTER_VOLUME: 0.8,            // 0..1, multiplies every Game.sound()
+  MASTER_VOLUME: 0.8,
 
-  // ---- Animation timings (ms) ----
-  BOUNCE_MS: 1600,               // envelope flies out and bounces back
-  ERROR_SOUND_LEAD_MS: 900,      // start error.wav this long BEFORE the "Mail Delivery Bounced" popup appears
-  DELIVER_MS: 900,               // envelope flies out and never returns (final stage)
-  LOADING_MS: 3000,              // loading screen after Start; then sounds/winxp.wav plays
+  BOUNCE_MS: 1600,
+  ERROR_SOUND_LEAD_MS: 900,
+  DELIVER_MS: 900,
+  LOADING_MS: 3000,
 
-  // ---- Background PC fan (sounds/fan.wav, loops the whole game) ----
-  FAN_START_VOLUME: 1.0,         // 0..1 — loud when you press Start (PC spinning up)
-  FAN_GAME_VOLUME: 0.08,         // 0..1 — quiet level it settles at for the rest of the game
-  FAN_FADE_MS: 8000,             // how long it takes to go from loud to quiet
+  FAN_START_VOLUME: 1.0,
+  FAN_GAME_VOLUME: 0.08,
+  FAN_FADE_MS: 8000,
 };
 
-/* =============================================================================
- *  2. CORE STATE + STAGE REGISTRY
- * ========================================================================== */
 const Game = {
   CONFIG,
-  state: {},        // shared scratch object for stages: Game.state.myThing = ...
-  stages: [],       // all registered stages, sorted by id
-  stage: null,      // the stage that is currently active (or null)
-  stageIndex: -1,   // index of the active stage in Game.stages (-1 = none yet)
-  started: false,   // true once the player pressed Start on the title screen
-  over: false,      // true after being fired or reaching the final stage
-  bounces: 0,       // how many times the email bounced (shown on the Bounced folder)
-  // Bounce-back tracker for the whole run (shown in the statusbar and on the end screen):
+  state: {},
+  stages: [],
+  stage: null,
+  stageIndex: -1,
+  started: false,
+  over: false,
+  bounces: 0,
   stats: {
-    bounces: 0,      // failed sends (same as Game.bounces)
-    rewrites: 0,     // sends where To/Subject/body/attachments changed since the previous send
-    charsTyped: 0,   // characters typed into subject + body (incl. stage 7's on-screen keyboard)
-    charsDeleted: 0, // characters deleted from subject + body
-    startTime: null, // Date.now() when Outlook opened (the run timer started)
-    endTime: null,   // Date.now() when delivered / fired
-    hintsUsed: 0,    // Clippy hint clicks
+    bounces: 0,
+    rewrites: 0,
+    charsTyped: 0,
+    charsDeleted: 0,
+    startTime: null,
+    endTime: null,
+    hintsUsed: 0,
   },
-  mailOpen: false,  // the Outlook Saga window is closed at boot; the player opens it from the desktop
-  scale: 1,         // current screen scale factor (set by fit())
-  layers: {},       // DOM layers: icons, windows, highlight, popups, fx, overlay (filled by init)
-  lines: {},        // ALL texts (Clippy, errors, hints) — filled by clippy-lines.js
+  mailOpen: false,
+  scale: 1,
+  layers: {},
+  lines: {},
 };
 window.Game = Game;
 
 (function () {
-  // ---------------------------------------------------------------------------
-  //  Tiny DOM helpers (private to the engine — stages can use Game.make)
-  // ---------------------------------------------------------------------------
   const $ = (sel, scope) => (scope || document).querySelector(sel);
   const resolveEl = (target) => (typeof target === 'string' ? document.querySelector(target) : target);
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
-  /** make('div', 'my-class', 'text') -> new element. Handy for stages too. */
   function make(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -127,41 +79,30 @@ window.Game = Game;
   }
   Game.make = make;
 
-  // Engine-wide DOM references, filled in by init()
   let root, screen, clockEl, trayIcons;
   let clippyEl, clippyImg, bubble, bubbleText;
 
   const STAGE_DEFAULTS = {
-    name: '',          // human-readable name (console / debugging)
-    vibe: null,        // Clippy's mood for this stage: happy | annoyed | angry | panic (null = auto)
-    // Texts normally come from clippy-lines.js ("stages": { "<id>": {...} }).
-    // These fields are only a fallback for stages that aren't in that file yet.
-    error: '',         // text in the "Mail Delivery Bounced" popup
-    clippy: '',        // what Clippy says when the stage starts
-    hint: '',          // what Clippy says when clicked (costs time)
-    retry: null,       // optional array of lines Clippy says when Send fails again
-    lines: null,       // { key: 'text' } — read with Game.line('key')
-    textVars: null,    // { limit: 500 } fills {limit} in error/clippy/hint/retry
-    assets: [],        // documentation only: art files this stage uses
-    todo: false,       // true = stub: shows "[stage not built yet]" and auto-passes
-    final: false,      // true = the ending: no bounce, setup() owns the screen
-    setup: null,       // setup(G)   — build the problem
-    check: null,       // check(G)   — true = fixed; false or 'reason' = still broken
-    cleanup: null,     // cleanup(G) — undo anything not registered with Game.track
+    name: '',
+    vibe: null,
+    error: '',
+    clippy: '',
+    hint: '',
+    retry: null,
+    lines: null,
+    textVars: null,
+    assets: [],
+    todo: false,
+    final: false,
+    setup: null,
+    check: null,
+    cleanup: null,
   };
 
-  /* ---- TEXT: every Clippy line / error / hint lives in clippy-lines.js ---- */
   const fill = (text, vars) =>
     vars ? String(text).replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m)) : text;
   const warnedKeys = new Set();
 
-  /**
-   * Game.line('notTheCat')            -> the current stage's lines.notTheCat
-   * Game.line('general.adBanner')     -> any path inside Game.lines (dots)
-   * Game.line('converted', { name })  -> fills {name} placeholders
-   * Arrays come back as arrays (pick one yourself). A missing key returns
-   * "[missing text: key]" and warns in the console, so typos are easy to spot.
-   */
   Game.line = function (key, vars) {
     let value;
     if (key.includes('.')) {
@@ -179,10 +120,9 @@ window.Game = Game;
     return Array.isArray(value) ? value.map((v) => fill(v, vars)) : fill(value, vars);
   };
 
-  /** Copy a stage's texts from clippy-lines.js into the stage (file wins over the stage's own fields). */
   function applyStageText(stage) {
     const t = (Game.lines.stages || {})[String(stage.id)];
-    const vars = stage.textVars; // e.g. { limit: 500 } fills {limit}
+    const vars = stage.textVars;
     if (t) {
       ['error', 'clippy', 'hint'].forEach((k) => { if (t[k] != null) stage[k] = t[k]; });
       if (t.retry) stage.retry = t.retry;
@@ -192,10 +132,6 @@ window.Game = Game;
     if (stage.retry) stage.retry = stage.retry.map((r) => fill(r, vars));
   }
 
-  /**
-   * Register a stage. Called once at the top level of each stages/NN-*.js file.
-   * Stages are kept sorted by id; ids can be decimals (7.5 slots between 7 and 8).
-   */
   Game.registerStage = function (def) {
     if (!def || typeof def.id !== 'number') {
       console.error('[Game] registerStage() needs a numeric id:', def);
@@ -210,11 +146,6 @@ window.Game = Game;
     Game.stages.sort((a, b) => a.id - b.id);
   };
 
-  /* ===========================================================================
-   *  3. SCREEN SCALING + COORDINATES
-   *  The game is a fixed 1280x720 box, scaled to fit the browser (black bars).
-   *  Everything inside uses game pixels; Game.toGame() converts mouse positions.
-   * ======================================================================== */
   function fit() {
     const s = Math.min(window.innerWidth / CONFIG.WIDTH, window.innerHeight / CONFIG.HEIGHT);
     const x = (window.innerWidth - CONFIG.WIDTH * s) / 2;
@@ -223,10 +154,6 @@ window.Game = Game;
     Game.scale = s;
   }
 
-  /**
-   * Browser (client) coordinates -> game coordinates (0..1280, 0..720).
-   * Accepts a mouse/pointer event, or (clientX, clientY).
-   */
   Game.toGame = function (a, b) {
     const cx = typeof a === 'object' ? a.clientX : a;
     const cy = typeof a === 'object' ? a.clientY : b;
@@ -234,16 +161,13 @@ window.Game = Game;
     return { x: (cx - r.left) / Game.scale, y: (cy - r.top) / Game.scale };
   };
 
-  /** An element's box in game coordinates: { x, y, w, h }. */
   Game.rectOf = function (target) {
     const r = resolveEl(target).getBoundingClientRect();
     const p = Game.toGame(r.left, r.top);
     return { x: p.x, y: p.y, w: r.width / Game.scale, h: r.height / Game.scale };
   };
 
-  /** True if a game-coordinate point ({x, y}, e.g. from a drop) is inside the element. */
   Game.hitTest = function (target, point, pad) {
-    // pad (optional, game px): make the target's hitbox bigger on every side
     const el = resolveEl(target);
     if (!el || !el.isConnected || !point) return false;
     const r = Game.rectOf(el);
@@ -251,28 +175,9 @@ window.Game = Game;
     return point.x >= r.x - p && point.x <= r.x + r.w + p && point.y >= r.y - p && point.y <= r.y + r.h + p;
   };
 
-  /* ===========================================================================
-   *  4. ART, UI KIT & SOUND
-   *  RULE: all art is hand-made by the team. Never generate images, SVG or
-   *  CSS-drawn graphics. Missing art shows a dashed placeholder with the filename.
-   *
-   *  Two kinds of art:
-   *   PICTURES  Game.asset('cat.png', {w, h}) — an <img>, scaled to fit.
-   *   SURFACES  any element with data-skin="button.png" — the image is drawn as
-   *             the element's frame/background (9-slice if style.css has a
-   *             --slice-button entry, otherwise stretched). Swap it with
-   *             Game.setSkin(el, 'other.png'). data-skin-pressed="x.png" swaps
-   *             automatically while the mouse button is held on the element.
-   *
-   *  Files are loaded by FILENAME. The browser looks at the file's content, so a
-   *  JPG, WebP or AVIF saved with a .png name still works. HEIC (iPhone) does
-   *  NOT work in browsers — run tools/fix-art.ps1. A file that fails to load
-   *  never crashes the game: it just shows the placeholder.
-   * ======================================================================== */
   const missingAssets = new Set();
   const baseName = (file) => String(file).replace(/\.[a-z0-9]+$/i, '');
 
-  /** Marks "<name>.png exists" on #game: class .skin-<name> + var --img-<name>. */
   function markFound(file) {
     const name = baseName(file);
     if (Game.skin.found.has(name)) return;
@@ -281,12 +186,6 @@ window.Game = Game;
     root.style.setProperty('--img-' + name, `url("${CONFIG.ASSET_PATH}${file}")`);
   }
 
-  /**
-   * Game.asset('cat.png', { w: 200, h: 150, className: 'my-class' })
-   * Returns a <div class="asset"> holding the image. If the file is missing the
-   * box turns into a dashed placeholder with the filename written in it.
-   * Always pass w/h so the placeholder has the right size.
-   */
   Game.asset = function (file, opts) {
     opts = opts || {};
     const box = make('div', 'asset' + (opts.className ? ' ' + opts.className : ''));
@@ -296,7 +195,6 @@ window.Game = Game;
     return box;
   };
 
-  /** Swap the picture inside an existing asset box (e.g. trash-empty -> trash-full). */
   Game.setAsset = function (box, file) {
     box = resolveEl(box);
     box.dataset.asset = file;
@@ -307,7 +205,7 @@ window.Game = Game;
     img.draggable = false;
     img.onload = () => markFound(file);
     img.onerror = () => {
-      if (box.dataset.asset !== file) return; // swapped to another file meanwhile
+      if (box.dataset.asset !== file) return;
       missingAssets.add(file);
       box.replaceChildren(make('span', 'asset-label', file));
       box.classList.add('asset-missing');
@@ -317,19 +215,11 @@ window.Game = Game;
     return box;
   };
 
-  /**
-   * SKINS (surfaces). Until a data-skin file has loaded, style.css shows the
-   * element as a dashed placeholder with the filename. Once the file loads we
-   * add a CSS rule for exactly that file which draws it with border-image and
-   * removes the placeholder. Every data-skin in the page is picked up
-   * automatically (also ones added later by stages).
-   */
-  const skinState = new Map(); // file -> 'loading' | 'found' | 'missing'
-  let skinStyle = null;        // <style> that receives one rule per found file
+  const skinState = new Map();
+  let skinStyle = null;
 
   Game.skin = {
     found: new Set(),
-    /** Game.skin.has('window-frame') -> true if assets/window-frame.png exists */
     has(name) { return this.found.has(baseName(name)); },
   };
 
@@ -343,7 +233,6 @@ window.Game = Game;
       const name = baseName(file);
       const url = `url("${CONFIG.ASSET_PATH}${file}")`;
       const sel = `#game [data-skin=${JSON.stringify(file)}]`;
-      // 9-slice when style.css defines --slice-<name>; otherwise slice 0 = stretch the whole image.
       skinStyle.appendChild(document.createTextNode(
         `${sel} { outline: none; background-color: transparent; ` +
           `border-style: solid; border-color: transparent; border-width: var(--frame-${name}, 0px); ` +
@@ -358,7 +247,6 @@ window.Game = Game;
     img.src = CONFIG.ASSET_PATH + file;
   }
 
-  /** Check every data-skin / data-skin-pressed inside `scope`. */
   function scanSkins(scope) {
     if (!scope || scope.nodeType !== 1) return;
     if (scope.dataset.skin) ensureSkin(scope.dataset.skin);
@@ -369,7 +257,6 @@ window.Game = Game;
     });
   }
 
-  /** Give an element a surface skin (or swap it): Game.setSkin(el, 'key-pressed.png') */
   Game.setSkin = function (el, file) {
     el = resolveEl(el);
     el.dataset.skin = file;
@@ -382,12 +269,10 @@ window.Game = Game;
     skinStyle.id = 'skin-rules';
     document.head.appendChild(skinStyle);
 
-    // 1. Pre-check the full list from the top of style.css (only "quoted" names count).
     const raw = getComputedStyle(document.documentElement).getPropertyValue('--os-assets');
     const listed = Array.from(raw.matchAll(/["']([^"']+)["']/g), (match) => match[1].trim());
     listed.forEach((file) => {
       if (/cursor/.test(file)) {
-        // Cursors aren't surfaces: just mark them found so style.css can use them.
         const img = new Image();
         img.onload = () => markFound(file);
         img.onerror = () => missingAssets.add(file);
@@ -397,7 +282,6 @@ window.Game = Game;
       }
     });
 
-    // 2. Everything already in the page, and everything added later.
     scanSkins(root);
     new MutationObserver((mutations) => {
       mutations.forEach((m) => {
@@ -406,7 +290,6 @@ window.Game = Game;
       });
     }).observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-skin', 'data-skin-pressed'] });
 
-    // 3. data-skin-pressed: swap skins while the mouse button is held down.
     let pressed = null;
     document.addEventListener('pointerdown', (e) => {
       const el = e.target.closest && e.target.closest('[data-skin-pressed]');
@@ -430,13 +313,7 @@ window.Game = Game;
     }, 1500);
   }
 
-  /* ---- UI KIT: the ONLY way stages should build buttons/fields/etc. ----
-   * Everything here is skinned with our art (see the list in style.css).
-   * Don't use native <select>, <input type=checkbox/range>, <progress>: the
-   * browser draws those itself.
-   */
   Game.ui = {
-    /** Game.ui.button('OK', onClick, { skin, pressed, className }) -> <button> */
     button(label, onClick, opts) {
       opts = opts || {};
       const btn = make('button', 'ui-btn' + (opts.className ? ' ' + opts.className : ''), label);
@@ -450,7 +327,6 @@ window.Game = Game;
       return btn;
     },
 
-    /** Game.ui.input({ value, placeholder, type, multiline, skin }) -> wrapper; wrapper.input is the field */
     input(opts) {
       opts = opts || {};
       const wrap = make('div', 'ui-field' + (opts.multiline ? ' multiline' : ''));
@@ -466,10 +342,6 @@ window.Game = Game;
       return wrap;
     },
 
-    /**
-     * Game.ui.checkbox('Remember me', false, (checked) => ..., { readOnly }) -> <label>
-     * .checked / .setChecked(v). Art: checkbox.png / checkbox-checked.png.
-     */
     checkbox(label, checked, onChange, opts) {
       opts = opts || {};
       const row = make('label', 'ui-checkbox' + (opts.readOnly ? ' read-only' : ' clickable'));
@@ -477,7 +349,7 @@ window.Game = Game;
       row.append(box, make('span', 'ui-checkbox-label', label));
       row.setChecked = (v) => {
         row.checked = !!v;
-        row.classList.toggle('is-checked', row.checked); // text shows the state too (CSS)
+        row.classList.toggle('is-checked', row.checked);
         Game.setSkin(box, row.checked ? 'checkbox-checked.png' : 'checkbox.png');
       };
       row.addEventListener('click', (e) => {
@@ -490,7 +362,6 @@ window.Game = Game;
       return row;
     },
 
-    /** Game.ui.progress(0.3) -> bar; bar.set(0..1), bar.value. Art: progress-bar.png / progress-fill.png */
     progress(value) {
       const bar = make('div', 'ui-progress');
       const fill = make('div', 'ui-progress-fill');
@@ -505,22 +376,15 @@ window.Game = Game;
       return bar;
     },
 
-    /** Game.ui.key('Q', onClick) — an on-screen keyboard key (key.png / key-pressed.png) */
     key(label, onClick) {
       const press = () => {
-        keyTyping = true; // mail.subject/body changes made by this click count as typing (Game.stats)
+        keyTyping = true;
         try { if (onClick) onClick(); } finally { keyTyping = false; }
       };
       return Game.ui.button(label, press, { skin: 'key.png', pressed: 'key-pressed.png', className: 'ui-key' });
     },
   };
 
-  /**
-   * Game.runProgress(bar, ms, steps, labelEl) -> Promise
-   * Fills a Game.ui.progress() bar from 0 to 100% over `ms`. Optional `steps`
-   * (array of strings) are shown one after another in `labelEl`.
-   * Cancelled automatically if the stage ends first (the promise then never resolves).
-   */
   Game.runProgress = function (bar, ms, steps, labelEl) {
     return new Promise((resolve) => {
       const t0 = performance.now();
@@ -544,12 +408,7 @@ window.Game = Game;
     });
   };
 
-  /**
-   * Game.sound('bounce.wav', volume = 1, rate = 1)
-   * Plays assets/sounds/<file>. Missing files silently do nothing.
-   * rate = playbackRate: 1.2 plays it faster AND higher (pitch is not preserved).
-   */
-  const sounds = {}; // file -> Audio element, or false if known to be missing
+  const sounds = {};
   Game.sound = function (file, volume, rate) {
     if (sounds[file] === false) return;
     let base = sounds[file];
@@ -558,35 +417,26 @@ window.Game = Game;
       base.addEventListener('error', () => { sounds[file] = false; });
       sounds[file] = base;
     }
-    // If the sound is already playing, play an overlapping copy.
     const audio = base.paused ? base : base.cloneNode();
     audio.volume = clamp((volume == null ? 1 : volume) * CONFIG.MASTER_VOLUME, 0, 1);
     audio.preservesPitch = false;
     audio.playbackRate = rate || 1;
-    try { audio.currentTime = 0; } catch (e) { /* not loaded yet — fine */ }
+    try { audio.currentTime = 0; } catch (e) {  }
     const p = audio.play();
-    if (p && p.catch) p.catch(() => {}); // missing file / autoplay block: stay silent
+    if (p && p.catch) p.catch(() => {});
   };
 
-  /* ===========================================================================
-   *  5. STAGE-SCOPED CLEANUP
-   *  Everything registered here is undone automatically when the current stage
-   *  is passed — so stages can't leak listeners, timers or UI into each other.
-   * ======================================================================== */
   let cleanups = [];
 
-  /** Register a function to run when the current stage ends. Returns fn. */
   Game.track = function (fn) {
     cleanups.push(fn);
     return fn;
   };
 
-  /** Used by helpers below: auto-remove UI created during a stage (unless persist). */
   function autoTrack(fn, persist) {
     if (!persist && Game.stage) cleanups.push(fn);
   }
 
-  /** addEventListener that is removed automatically when the stage ends. */
   Game.on = function (target, type, fn, options) {
     target = resolveEl(target);
     target.addEventListener(type, fn, options);
@@ -594,14 +444,12 @@ window.Game = Game;
     return fn;
   };
 
-  /** setTimeout that is cancelled automatically when the stage ends. */
   Game.timeout = function (fn, ms) {
     const id = setTimeout(fn, ms);
     Game.track(() => clearTimeout(id));
     return id;
   };
 
-  /** setInterval that is cancelled automatically when the stage ends. */
   Game.interval = function (fn, ms) {
     const id = setInterval(fn, ms);
     Game.track(() => clearInterval(id));
@@ -616,11 +464,6 @@ window.Game = Game;
     }
   }
 
-  /* ===========================================================================
-   *  6. UI HELPERS
-   * ======================================================================== */
-
-  // ---- shared title bar (used by windows and popups) ----
   function makeTitlebar(title, opts) {
     const bar = make('div', 'xp-titlebar');
     Game.setSkin(bar, 'titlebar.png');
@@ -641,18 +484,8 @@ window.Game = Game;
     return bar;
   }
 
-  // ---- popups ----
-  const BUILTIN_ICONS = ['error', 'warning', 'info']; // -> icon-error.png etc.
+  const BUILTIN_ICONS = ['error', 'warning', 'info'];
 
-  /**
-   * Game.popup({ title, text, html, icon, buttons, modal, closable, onClose, skin })
-   *   icon:    'error' | 'warning' | 'info' (= icon-<name>.png) or any asset filename
-   *   buttons: [{ label: 'OK', onClick(popup) { return false to keep it open } }]
-   *            default: one OK button. Pass [] for no buttons.
-   *   modal:   true (default) blocks clicks on everything behind it
-   *   skin:    frame art, default 'popup-frame.png'
-   * Returns { el, close() }. Popups can be dragged by their title bar.
-   */
   Game.popup = function (opts) {
     opts = opts || {};
     const buttons = opts.buttons || [{ label: 'OK' }];
@@ -695,7 +528,7 @@ window.Game = Game;
         }));
       });
       win.appendChild(row);
-      setTimeout(() => row.firstChild && row.firstChild.focus(), 0); // Enter = first button
+      setTimeout(() => row.firstChild && row.firstChild.focus(), 0);
     }
 
     blocker.appendChild(win);
@@ -703,21 +536,13 @@ window.Game = Game;
     return api;
   };
 
-  // ---- windows ----
   let zTop = 10;
 
-  /** Bring a window element above the other windows. */
   Game.bringToFront = function (win) {
     win = resolveEl(win);
-    // "Always on top" windows live in a higher band, so normal windows can't cover them.
     win.style.zIndex = (win.dataset.onTop ? 100000 : 0) + ++zTop;
   };
 
-  /**
-   * Drag `win` around by `handle` (its title bar). Works for absolutely
-   * positioned windows and for centered ones (popups): those switch to
-   * absolute positioning on the first drag.
-   */
   function makeWindowDraggable(win, handle) {
     handle.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || e.target.closest('button')) return;
@@ -735,7 +560,6 @@ window.Game = Game;
       const y0 = win.offsetTop;
       const move = (ev) => {
         const p = Game.toGame(ev);
-        // keep at least part of the window on screen
         win.style.left = clamp(x0 + p.x - p0.x, 60 - win.offsetWidth, CONFIG.WIDTH - 60) + 'px';
         win.style.top = clamp(y0 + p.y - p0.y, 0, CONFIG.HEIGHT - 70) + 'px';
       };
@@ -748,23 +572,12 @@ window.Game = Game;
     });
   }
 
-  /** Game.makeMovable(win, handle) — for a custom window built without Game.openWindow. */
   Game.makeMovable = function (win, handle) {
     win = resolveEl(win);
     makeWindowDraggable(win, handle ? resolveEl(handle) : win.querySelector('.xp-titlebar') || win);
     return win;
   };
 
-  /**
-   * Game.openWindow({ title, html, x, y, w, h, closable, icon, skin, className, onClose, persist })
-   *   html:  string of HTML or a DOM node, placed in the window body
-   *   x, y:  top-left in game pixels (default: centered); w, h: outer size
-   *   skin:  frame art, default 'window-frame.png'
-   *   onClose(win): runs whenever the window closes (also at stage end!)
-   *   persist: true = don't auto-close when the stage ends
-   *   alwaysOnTop: true = stays above every normal window (e.g. clicking the mail window won't hide it)
-   * Returns { el, body, close(), setTitle(text) }.
-   */
   Game.openWindow = function (opts) {
     opts = opts || {};
     const w = opts.w || 400;
@@ -809,16 +622,8 @@ window.Game = Game;
     return api;
   };
 
-  // ---- app windows ----
-  const openApps = {}; // app id -> window api
+  const openApps = {};
 
-  /**
-   * Game.openApp({ id, title, html, icon, x, y, w, h, skin, onClose, persist })
-   * Like Game.openWindow, but for desktop "apps": non-modal, draggable,
-   * closable, and only ONE window per id — opening it again just brings the
-   * existing window to the front. Returns the same api as openWindow, plus
-   * `created: true` the first time.
-   */
   Game.openApp = function (opts) {
     const existing = openApps[opts.id];
     if (existing && existing.el.isConnected) {
@@ -840,12 +645,6 @@ window.Game = Game;
     return win;
   };
 
-  // ---- desktop icons ----
-  /**
-   * Game.addIcon({ id, label, asset, x, y, onClick, onDoubleClick, persist })
-   * Puts an icon on the desktop. Returns the icon element (id "icon-<id>").
-   * Change its label later with icon.setLabel('text').
-   */
   Game.addIcon = function (opts) {
     const icon = make('div', 'desktop-icon');
     if (opts.id) icon.id = 'icon-' + opts.id;
@@ -865,17 +664,11 @@ window.Game = Game;
     return icon;
   };
 
-  /** Remove a desktop icon by the id you gave addIcon. */
   Game.removeIcon = function (id) {
     const icon = document.getElementById('icon-' + id);
     if (icon) icon.remove();
   };
 
-  /**
-   * Game.addProp({ id, asset, x, y, w, h, layer, persist }) — a loose picture on
-   * the desktop (charger plug, cable, socket...). layer: 'icons' (default, under
-   * windows) or any key of Game.layers. Removed when the stage ends.
-   */
   Game.addProp = function (opts) {
     const el = Game.asset(opts.asset, { w: opts.w, h: opts.h, className: 'prop' });
     if (opts.id) el.id = 'prop-' + opts.id;
@@ -886,16 +679,6 @@ window.Game = Game;
     return el;
   };
 
-  // ---- system tray (bottom right of the taskbar) ----
-  /**
-   * Game.tray.add(id, label, onClick, { icon, iconW, iconH, text, title, persist })
-   *   label: name shown as the tooltip
-   *   icon:  picture, default 'tray-<id>.png'   (swap with Game.tray.setIcon)
-   *   iconW / iconH: icon size in px (default 20 x 20)
-   *   text:  optional text next to the icon     (change with Game.tray.setText)
-   * Built-in items: 'volume', 'wifi', 'battery' (persistent — if your stage
-   * changes them, put them back in cleanup).
-   */
   Game.tray = {
     add(id, label, onClick, opts) {
       opts = opts || {};
@@ -911,7 +694,7 @@ window.Game = Game;
         item.classList.add('clickable');
         item.addEventListener('click', (e) => onClick(e, item));
       }
-      trayIcons.prepend(item); // newest on the left, like the real thing
+      trayIcons.prepend(item);
       autoTrack(() => item.remove(), opts.persist);
       return item;
     },
@@ -922,26 +705,16 @@ window.Game = Game;
     get(id) {
       return trayIcons.querySelector(`[data-id="${CSS.escape(id)}"]`);
     },
-    /** Swap the tray icon picture, e.g. setIcon('caps', 'tray-caps-on.png') */
     setIcon(id, file) {
       const item = Game.tray.get(id);
       if (item) Game.setAsset(item.querySelector('.tray-icon'), file);
     },
-    /** Change the text next to the icon, e.g. setText('battery', '3%') */
     setText(id, text) {
       const item = Game.tray.get(id);
       if (item) item.querySelector('.tray-text').textContent = text;
     },
   };
 
-  // ---- drag & drop ----
-  /**
-   * Game.makeDraggable(el, { onDrop, onMove, onStart, revert, handle })
-   * Moves the element itself (CSS translate). onDrop(el, point) -> return true
-   * to accept; with revert: true it snaps back unless accepted.
-   * NOTE: the element stays in its own layer, so it can slide UNDER windows.
-   * For dragging things across windows, use Game.dragGhost instead.
-   */
   Game.makeDraggable = function (target, opts) {
     target = resolveEl(target);
     opts = opts || {};
@@ -971,7 +744,7 @@ window.Game = Game;
       const dx = p.x - start.px;
       const dy = p.y - start.py;
       if (!moved) {
-        if (Math.hypot(dx, dy) < 4) return; // tiny wobble = still a click
+        if (Math.hypot(dx, dy) < 4) return;
         moved = true;
         target.classList.add('dragging');
         if (opts.onStart) opts.onStart(target, p);
@@ -1010,15 +783,6 @@ window.Game = Game;
     };
   };
 
-  /**
-   * Game.dragGhost(el, { onDrop(point, el), onStart(el), canDrag(), persist })
-   * Drag a COPY ("ghost") of `el` on the top layer, so it's visible above every
-   * window. The original stays where it is (dimmed while dragging). On release
-   * the ghost disappears and onDrop gets the mouse position in game coords:
-   * use Game.hitTest(target, point) to see where it was dropped, then move or
-   * remove the original yourself. A click right after a drag is swallowed.
-   * Returns { destroy() }; auto-removed at stage end unless persist: true.
-   */
   Game.dragGhost = function (target, opts) {
     target = resolveEl(target);
     opts = opts || {};
@@ -1088,7 +852,6 @@ window.Game = Game;
     return api;
   };
 
-  /** True if two elements' boxes overlap by more than `minPx` game pixels. */
   Game.overlaps = function (a, b, minPx) {
     const ra = resolveEl(a).getBoundingClientRect();
     const rb = resolveEl(b).getBoundingClientRect();
@@ -1098,12 +861,6 @@ window.Game = Game;
     return ox > min && oy > min;
   };
 
-  // ---- juice ----
-  /**
-   * Game.highlight(selectorOrElement, ms = 3000) — a pulsing highlight-frame.png
-   * around the element (follows it if it moves). ms = 0 keeps it until the
-   * stage ends. Returns a function that removes it.
-   */
   Game.highlight = function (target, ms) {
     const els = (typeof target === 'string' ? Array.from(document.querySelectorAll(target)) : [target]).filter(Boolean);
     const frames = els.map((el) => {
@@ -1141,20 +898,13 @@ window.Game = Game;
     return off;
   };
 
-  /** Shake the whole screen. Game.shake(strength = 1): 0.5 = light, 2 = strong. */
   Game.shake = function (strength) {
     screen.style.setProperty('--shake', strength || 1);
     screen.classList.remove('shake');
-    void screen.offsetWidth; // restart the CSS animation
+    void screen.offsetWidth;
     screen.classList.add('shake');
   };
 
-  /**
-   * Game.blackout('Laptop died.', 2000) -> Promise
-   * Hides the whole screen (you see the black page behind the game) with a line
-   * of text in the middle, for `ms` milliseconds. Nothing is drawn: the black
-   * comes from the page background.
-   */
   Game.blackout = function (text, ms) {
     return new Promise((resolve) => {
       screen.classList.add('blackout');
@@ -1168,17 +918,11 @@ window.Game = Game;
     });
   };
 
-  /* ===========================================================================
-   *  7. CLIPPY
-   *  Moods load assets/clippy-<mood>.png. Clicking Clippy shows the stage hint
-   *  but costs CONFIG.HINT_COST_MINUTES. His bubble is speech-bubble.png.
-   * ======================================================================== */
   const MOODS = ['happy', 'annoyed', 'angry', 'panic'];
-  let slowIdleMs = 0; // time since the player last made progress / Clippy last spoke (see slowNudgeTick)
+  let slowIdleMs = 0;
 
   Game.clippy = {
     mood: 'happy',
-    /** Game.clippy.say(text, mood) — mood: happy | annoyed | angry | panic */
     say(text, mood) {
       if (mood && !MOODS.includes(mood)) {
         console.warn(`[Game] Unknown Clippy mood "${mood}". Use: ${MOODS.join(', ')}`);
@@ -1190,11 +934,11 @@ window.Game = Game;
         Game.setAsset(clippyImg, `clippy-${mood}.png`);
       }
       clippyEl.dataset.mood = mood;
-      slowIdleMs = 0; // he just talked: restart the "you're slow" timer
+      slowIdleMs = 0;
       bubbleText.textContent = text;
       bubble.classList.remove('hidden', 'pop');
       void bubble.offsetWidth;
-      bubble.classList.add('pop'); // (Clippy is silent on purpose: no sound when he talks)
+      bubble.classList.add('pop');
     },
     hide() {
       bubble.classList.add('hidden');
@@ -1204,7 +948,7 @@ window.Game = Game;
   function onClippyClick() {
     if (!Game.started || Game.over) return;
     if (!Game.mailOpen) {
-      Game.clippy.say(Game.line('general.openOutlookFirst')); // free: no time cost before Outlook is open
+      Game.clippy.say(Game.line('general.openOutlookFirst'));
       return;
     }
     const stage = Game.stage;
@@ -1218,15 +962,8 @@ window.Game = Game;
     Game.clock.add(cost);
   }
 
-  /* ===========================================================================
-   *  8. MAIL
-   * ======================================================================== */
   let charLimit = null;
 
-  /* ---- Bounce-back tracker: typed / deleted characters (Game.stats) ----
-   * Real typing in the subject/body is measured per input event (old text vs new
-   * text, so select-and-replace counts both). Text set from code (mail.subject = ...)
-   * does NOT count, except while an on-screen key (Game.ui.key) is being pressed. */
   let keyTyping = false;
   function countEdit(before, after) {
     if (before === after) return;
@@ -1242,13 +979,11 @@ window.Game = Game;
     let base = field.value;
     field.addEventListener('beforeinput', () => { base = field.value; });
     field.addEventListener('input', () => {
-      // read the text after every other input listener ran (e.g. stage 2 forces CAPS)
       setTimeout(() => { countEdit(base, field.value); base = field.value; }, 0);
     });
   }
 
   Game.mail = {
-    /** Raw elements: window, from, to, subject, body, bodyWrap, counter, send, attachBar, attachList, status */
     el: {},
 
     get from() { return this.el.from.value; },
@@ -1263,7 +998,7 @@ window.Game = Game;
     set subject(v) {
       if (keyTyping) countEdit(this.el.subject.value, v);
       this.el.subject.value = v;
-      checkEasterEggs(); // e.g. typed on stage 7's on-screen keyboard
+      checkEasterEggs();
     },
     get body() { return this.el.body.value; },
     set body(v) {
@@ -1271,18 +1006,15 @@ window.Game = Game;
       this.el.body.value = v;
       Game.mail.updateCounter();
     },
-    /** Status bar text (bottom of the mail window). Default: CONFIG.STATUS_TEXT */
     get status() { return this.el.status.textContent; },
     set status(v) { this.el.status.textContent = v; },
 
-    /** null = no limit. A number shows "123 / 500" and turns red when over. */
     get charLimit() { return charLimit; },
     set charLimit(v) {
       charLimit = v;
       Game.mail.updateCounter();
     },
 
-    /** Refresh the live character counter (called automatically on typing). */
     updateCounter() {
       const counter = Game.mail.el.counter;
       if (!counter) return;
@@ -1292,19 +1024,14 @@ window.Game = Game;
     },
   };
 
-  // ---- attachments ----
-  const attached = [];   // [{ name, size, icon, el }]
-  let attachDrop = null; // drop handler set by Game.dragAttachments (stage-scoped)
+  const attached = [];
+  let attachDrop = null;
 
   function renderAttachBar() {
     Game.mail.el.attachBar.classList.toggle('empty', attached.length === 0);
   }
 
   Game.attachments = {
-    /**
-     * Game.attachments.add('cat.jpg', '4.2 GB', 'file-photo.png') -> chip element
-     * Adding a name that already exists replaces it. Chip art: attach-chip.png.
-     */
     add(name, sizeLabel, iconAsset) {
       Game.attachments.remove(name);
       const icon = iconAsset || 'file-doc.png';
@@ -1316,7 +1043,6 @@ window.Game = Game;
         make('span', 'attachment-name', name),
         make('span', 'attachment-size', sizeLabel ? `(${sizeLabel})` : '')
       );
-      // Chips can be dragged out of the email while a stage has called Game.dragAttachments().
       Game.dragGhost(chip, {
         persist: true,
         canDrag: () => !!attachDrop,
@@ -1338,7 +1064,6 @@ window.Game = Game;
       renderAttachBar();
       return true;
     },
-    /** Copy of the list: [{ name, size, icon, el }] */
     list() { return attached.slice(); },
     get(name) { return attached.find((a) => a.name === name) || null; },
     setSize(name, sizeLabel) {
@@ -1347,7 +1072,6 @@ window.Game = Game;
       a.size = sizeLabel;
       a.el.querySelector('.attachment-size').textContent = `(${sizeLabel})`;
     },
-    /** Rename in place: rename('cat.jpg', 'cat.png', { size, icon }) */
     rename(oldName, newName, opts) {
       const a = Game.attachments.get(oldName);
       if (!a) return null;
@@ -1366,31 +1090,11 @@ window.Game = Game;
     },
   };
 
-  /**
-   * Game.dragAttachments((attachment, point) => { ... })
-   * For the rest of the current stage, attachment chips can be dragged out of
-   * the email (as a ghost on the top layer). On release your function gets the
-   * attachment entry and the drop point; use Game.hitTest(target, point).
-   * If you don't remove the attachment, the chip simply stays in the email.
-   */
   Game.dragAttachments = function (onDrop) {
     attachDrop = onDrop;
     Game.track(() => { if (attachDrop === onDrop) attachDrop = null; });
   };
 
-  /**
-   * Game.wordView(tokens, onClick) -> view
-   * Temporarily replaces the email body with a read-only view made of clickable
-   * words. tokens: [{ text, tag }] — tokens WITH a tag are clickable spans with
-   * class "word word-<tag>"; tokens without a tag are plain text (keep the
-   * spaces/newlines as their own tokens). onClick(index, token, view) may
-   * change view.tokens; the view re-renders after each click.
-   *   view.text()        current text
-   *   view.count(tag)    how many tokens have this tag
-   *   view.close()       write the text back into the body and show the textarea
-   * Closed automatically when the stage ends (so the body keeps the result).
-   * Game.wordView.split(text) turns plain text into untagged tokens.
-   */
   Game.wordView = function (tokens, onClick) {
     const m = Game.mail.el;
     const el = make('div', 'word-view');
@@ -1436,13 +1140,11 @@ window.Game = Game;
   };
   Game.wordView.split = (text) => String(text).split(/(\s+)/).filter((s) => s !== '').map((s) => ({ text: s }));
 
-  // ---- Bounced folder counter + "Sending..." bar ----
   function renderBounces() {
     const el = $('#bounce-count');
     if (el) el.textContent = Game.bounces;
-    // Bounce-back meter in the statusbar (text only, on statusbar.png)
     const meter = $('#bounce-meter');
-    if (meter) meter.textContent = `Bounces: ${Game.stats.bounces} · Rewrites: ${Game.stats.rewrites}`;
+    if (meter) meter.textContent = `You bounced back ${Game.bounces} time${Game.bounces === 1 ? '' : 's'}`;
   }
 
   let sendBar = null;
@@ -1462,11 +1164,6 @@ window.Game = Game;
     $('#send-progress').classList.add('hidden');
   }
 
-  /* ===========================================================================
-   *  9. CLOCK
-   *  Starts at CONFIG.START_TIME; at CONFIG.DEADLINE you're fired
-   *  (unless ?nodeadline=1 is in the URL).
-   * ======================================================================== */
   let minutes = CONFIG.START_TIME;
   let tickTimer = null;
   let frozen = false;
@@ -1488,17 +1185,14 @@ window.Game = Game;
       clearInterval(tickTimer);
       tickTimer = null;
     },
-    /** Debug: stop time completely (?freeze in the URL). */
     freeze() {
       frozen = true;
       Game.clock.stop();
     },
-    /** Debug: the clock keeps running but 9:00 never fires you (?nodeadline=1). */
     disableDeadline() {
       noDeadline = true;
       renderClock();
     },
-    /** Add (or with a negative number, give back) minutes. */
     add(n) {
       if (Game.over || frozen) return;
       minutes += n;
@@ -1512,15 +1206,11 @@ window.Game = Game;
     },
   };
 
-  /* ---- Run timer: REAL time (speedrun style), shown in the taskbar next to the clock ----
-   * Starts when Outlook opens, stops when the email is delivered (or you're fired).
-   * Game.timer.ms, .text, .start(), .stop(), .format(ms), .best (fastest win, saved in
-   * this browser), .saveBest() -> true if this run is a new record. */
   const BEST_KEY = 'outlook-saga-best-ms';
   let runStart = 0;
   let runEnd = 0;
   let runTimerTick = null;
-  let fullRun = false; // only runs played from the title screen (no ?stage= / debug jumps) set a best time
+  let fullRun = false;
   function renderRunTimer() {
     const el = $('#run-timer');
     if (el) el.textContent = Game.timer.text;
@@ -1550,13 +1240,12 @@ window.Game = Game;
     get best() {
       try { const v = Number(localStorage.getItem(BEST_KEY)); return v > 0 ? v : null; } catch (e) { return null; }
     },
-    /** true when this run started from the title screen with no debug jumps */
     get fullRun() { return fullRun; },
     saveBest() {
       if (!fullRun) return false;
       const best = Game.timer.best;
       if (best && best <= Game.timer.ms) return false;
-      try { localStorage.setItem(BEST_KEY, String(Math.round(Game.timer.ms))); } catch (e) { /* private mode */ }
+      try { localStorage.setItem(BEST_KEY, String(Math.round(Game.timer.ms))); } catch (e) {  }
       return true;
     },
   };
@@ -1577,14 +1266,8 @@ window.Game = Game;
     });
   }
 
-  /* ===========================================================================
-   *  10. GAME FLOW
-   *  Send -> envelope flies out and bounces back -> either the same stage fails
-   *  again, or the stage is cleaned up and the next one starts.
-   * ======================================================================== */
   let sending = false;
 
-  /** Run a stage's check(). Returns { pass, reason }. Stubs always pass. */
   function runCheck(stage) {
     if (stage.todo || stage._broken) return { pass: true };
     if (typeof stage.check !== 'function') {
@@ -1596,13 +1279,11 @@ window.Game = Game;
       if (typeof result === 'string') return { pass: false, reason: result };
       return { pass: !!result };
     } catch (err) {
-      // A crashing check must never soft-lock the game: log it and let the player through.
       console.error(`[Game] Stage ${stage.id} check() crashed — auto-passing:`, err);
       return { pass: true };
     }
   }
 
-  /** Call stage[fnName](Game) safely. Returns false if it crashed. */
   function safeCall(stage, fnName) {
     if (typeof stage[fnName] !== 'function') return true;
     try {
@@ -1614,17 +1295,12 @@ window.Game = Game;
     }
   }
 
-  /** Clippy's default mood by progress, used when a stage has no `vibe`. */
   function autoMood(stage) {
     const playable = Game.stages.filter((s) => !s.final);
     const t = playable.indexOf(stage) / Math.max(1, playable.length);
     return MOODS[clamp(Math.floor(t * MOODS.length), 0, MOODS.length - 1)];
   }
 
-  /**
-   * The envelope flies out of the Send button; bounces back unless delivered.
-   * onLand() runs at the SPLAT moment (the bounce is counted there).
-   */
   function flyEnvelope(bounceBack, onLand) {
     return new Promise((resolve) => {
       const r = Game.rectOf(Game.mail.el.send);
@@ -1642,8 +1318,8 @@ window.Game = Game;
         ? [
             { offset: 0, transform: home, easing: 'ease-in' },
             { offset: 0.35, transform: away },
-            { offset: 0.45, transform: away, easing: 'ease-in' }, // hang off-screen for a beat
-            { offset: 0.72, transform: 'translate(0px, 0px) rotate(-12deg) scale(1.3, 0.75)', easing: 'ease-out' }, // SPLAT
+            { offset: 0.45, transform: away, easing: 'ease-in' },
+            { offset: 0.72, transform: 'translate(0px, 0px) rotate(-12deg) scale(1.3, 0.75)', easing: 'ease-out' },
             { offset: 0.84, transform: 'translate(0px, -80px) rotate(6deg) scale(1)', easing: 'ease-in' },
             { offset: 0.93, transform: 'translate(0px, 0px) rotate(0deg) scale(1.1, 0.9)', easing: 'ease-out' },
             { offset: 0.97, transform: 'translate(0px, -16px) rotate(0deg) scale(1)', easing: 'ease-in' },
@@ -1672,32 +1348,28 @@ window.Game = Game;
     });
   }
 
-  let errorSoundQueued = false; // send() started error.wav early; the popup shouldn't play it again
+  let errorSoundQueued = false;
 
-  /** The Send button. Also available as Game.send() for stages. */
   async function send() {
     if (!Game.started || !Game.mailOpen || Game.over || sending || screen.classList.contains('blackout')) return;
     sending = true;
     slowIdleMs = 0;
-    root.classList.add('busy'); // CSS: busy cursor + no clicks on the screen while the envelope flies
+    root.classList.add('busy');
     window.addEventListener('keydown', blockKeysWhileFlying, true);
     Game.sound('send.wav');
     const statusBefore = Game.mail.status === 'Bounced. Obviously.' ? CONFIG.STATUS_TEXT : Game.mail.status;
     Game.mail.status = 'Sending...';
 
-    // Bounce-back tracker: did the player change the email since the last send?
     if (lastSentSnapshot !== null && emailSnapshot() !== lastSentSnapshot) Game.stats.rewrites++;
     renderBounces();
 
-    // Decide the outcome BEFORE animating, so we know if the envelope bounces.
-    const outcome = Game.stage ? runCheck(Game.stage) : { pass: true }; // no stage yet -> start stage 1
+    const outcome = Game.stage ? runCheck(Game.stage) : { pass: true };
     const nextIndex = outcome.pass ? Game.stageIndex + 1 : Game.stageIndex;
     const next = Game.stages[nextIndex];
     const delivered = outcome.pass && (!next || next.final);
 
     if (!delivered) Game.clock.add(CONFIG.SEND_COST_MINUTES);
     if (!delivered && !Game.over) {
-      // The popup comes when the envelope lands; start error.wav a bit earlier so it lines up.
       errorSoundQueued = true;
       setTimeout(() => Game.sound('error.wav'), Math.max(0, CONFIG.BOUNCE_MS - CONFIG.ERROR_SOUND_LEAD_MS));
     }
@@ -1713,14 +1385,14 @@ window.Game = Game;
     root.classList.remove('busy');
     window.removeEventListener('keydown', blockKeysWhileFlying, true);
     if (Game.mail.status === 'Sending...' || Game.mail.status === 'Bounced. Obviously.') Game.mail.status = statusBefore;
-    if (Game.over) return; // fired while the envelope was in the air
+    if (Game.over) return;
 
     if (!outcome.pass) stillFailed(outcome.reason);
     else {
       finishStage();
       startStage(nextIndex);
     }
-    lastSentSnapshot = emailSnapshot(); // the next stage may have changed the email: that's not a rewrite
+    lastSentSnapshot = emailSnapshot();
   }
   Game.send = send;
 
@@ -1729,20 +1401,13 @@ window.Game = Game;
     e.stopPropagation();
   }
 
-  /* ---- Bounce-back tracker: rewrites ----
-   * One rewrite per send when To / Subject / body / attachments differ from how the
-   * email looked right after the previous send (or when Outlook was opened). */
   let lastSentSnapshot = null;
   function emailSnapshot() {
     const m = Game.mail;
     return JSON.stringify([m.to, m.subject, m.body, Game.attachments.list().map((a) => a.name + '|' + a.size)]);
   }
-  /** " - Bounce #7" for the error popup titles (nothing before the first bounce, e.g. ?stage=N). */
   const bounceTag = () => (Game.bounces ? ` - Bounce #${Game.bounces}` : '');
 
-  /* ---- SUBMIT button: sometimes asks "Are you sure?" first (CONFIG.CONFIRM_CHANCE) ----
-   * Only the button does this; Game.send() from stage code always sends straight away.
-   * The Yes/No buttons swap places at random. Texts: clippy-lines.js -> general.confirm */
   let confirming = false;
   function onSendClick() {
     if (!Game.started || !Game.mailOpen || Game.over || sending || confirming) return;
@@ -1780,13 +1445,10 @@ window.Game = Game;
       icon: 'warning',
       text: questions[Math.min(level, questions.length - 1)],
       buttons,
-      onClose: () => { if (!answered) no(); }, // the X counts as "No"
+      onClose: () => { if (!answered) no(); },
     });
   }
 
-  /* ---- Clippy gets impatient: after CONFIG.SLOW_NUDGE_MS of no progress ----
-   * The timer restarts whenever Clippy talks or you press Send, and pauses while
-   * a (modal) popup is open. Texts: clippy-lines.js -> general.slow.<mood> */
   function slowNudgeTick(dt) {
     if (!Game.started || Game.over || sending || confirming || document.hidden) return;
     if (screen.classList.contains('blackout')) return;
@@ -1795,7 +1457,6 @@ window.Game = Game;
     if (slowIdleMs < CONFIG.SLOW_NUDGE_MS) return;
     const stage = Game.stage;
     const mood = !Game.mailOpen || !stage ? 'happy' : stage.vibe || autoMood(stage);
-    // A stage can say its own thing instead: slowNudge(G) returns a line, or nothing for the generic one.
     if (Game.mailOpen && stage && typeof stage.slowNudge === 'function') {
       let own = null;
       try { own = stage.slowNudge(Game); } catch (err) { console.error(`[Game] Stage ${stage.id} slowNudge() crashed:`, err); }
@@ -1805,13 +1466,9 @@ window.Game = Game;
       }
     }
     const lines = Game.line(!Game.mailOpen ? 'general.slow.outlook' : 'general.slow.' + mood);
-    Game.clippy.say(Array.isArray(lines) ? pick(lines) : lines, mood); // resets slowIdleMs
+    Game.clippy.say(Array.isArray(lines) ? pick(lines) : lines, mood);
   }
 
-  /* ---- Easter eggs: "hack club" / "game jam" in the subject ----
-   * Each one fires once per game: a happy popup, Clippy cheers, and the clock
-   * gives back CONFIG.EASTER_EGG_BONUS_MINUTES. Spaces/caps/dashes don't matter.
-   * Texts: clippy-lines.js -> general.easterEggs.<key>  Sound: sounds/easter-egg.wav */
   const EASTER_EGGS = ['hackclub', 'gamejam'];
   const easterEggsFound = new Set();
   function checkEasterEggs() {
@@ -1829,7 +1486,7 @@ window.Game = Game;
         modal: false,
         buttons: [{ label: Game.line(`general.easterEggs.${key}.button`) }],
       });
-      setTimeout(() => Game.mail.el.subject.focus(), 20); // keep typing (the popup grabs focus)
+      setTimeout(() => Game.mail.el.subject.focus(), 20);
       Game.clock.add(-minutes);
       Game.clippy.say(Game.line(`general.easterEggs.${key}.clippy`, { minutes }), 'happy');
     });
@@ -1844,11 +1501,11 @@ window.Game = Game;
     Game.stageIndex = index;
     Game.stage = stage;
     cleanups = [];
-    root.dataset.stage = stage.id; // CSS hook: #game[data-stage="7"] ...
+    root.dataset.stage = stage.id;
     console.info(`[Game] ▶ Stage ${stage.id}: ${stage.name}${stage.todo ? '  (todo stub)' : ''}`);
 
     if (stage.final) {
-      Game.over = true; // the final stage owns the screen from here on
+      Game.over = true;
       Game.clock.stop();
       Game.timer.stop();
       if (!safeCall(stage, 'setup')) deliveredFallback();
@@ -1856,7 +1513,7 @@ window.Game = Game;
     }
 
     if (!stage.todo && !safeCall(stage, 'setup')) {
-      stage._broken = true; // treat like a stub so the game stays playable
+      stage._broken = true;
     }
 
     const stub = stage.todo || stage._broken;
@@ -1872,10 +1529,9 @@ window.Game = Game;
     Game.clippy.say(stage.clippy || '...', stage.vibe || autoMood(stage));
   }
 
-  /** error.wav for the popup — unless send() already started it early (ERROR_SOUND_LEAD_MS). */
   function playErrorSound() {
     if (errorSoundQueued) errorSoundQueued = false;
-    else Game.sound('error.wav'); // e.g. ?stage=N / debug jumps, where there was no send
+    else Game.sound('error.wav');
   }
 
   function stillFailed(reason) {
@@ -1900,11 +1556,6 @@ window.Game = Game;
     console.info(`[Game] ✔ Stage ${stage.id} passed`);
   }
 
-  /**
-   * Game.restartStage() — undo the current stage (cleanup + tracked cleanups)
-   * and run its setup() again, without the error popup. For "try again"
-   * moments like the battery dying in stage 13.
-   */
   Game.restartStage = function () {
     const stage = Game.stage;
     if (!stage || Game.over) return;
@@ -1913,7 +1564,6 @@ window.Game = Game;
     if (!stage.todo && !safeCall(stage, 'setup')) stage._broken = true;
   };
 
-  /** Only used if there is no `final: true` stage (e.g. its file is missing). */
   function deliveredFallback() {
     Game.over = true;
     Game.clock.stop();
@@ -1928,80 +1578,10 @@ window.Game = Game;
     });
   }
 
-  /* ---- END SCREEN: the bounce-back stats (shown by stage 18 after the blue screen) ----
-   * Game.showStats() puts a full-screen page on bluescreen-bg.png (white text, blue screen
-   * style) with Game.stats, the best run (fewest bounces, then fastest; saved in this
-   * browser, only full runs from the title screen count) and "Press any key to try again." */
-  const BEST_RUN_KEY = 'outlook-saga-best-run';
-  function loadBestRun() {
-    try {
-      const v = JSON.parse(localStorage.getItem(BEST_RUN_KEY));
-      return v && v.bounces >= 0 && v.ms > 0 ? v : null;
-    } catch (e) { return null; }
-  }
-  function saveBestRun(run) {
-    try { localStorage.setItem(BEST_RUN_KEY, JSON.stringify(run)); } catch (e) { /* private mode: no record */ }
-  }
-  const mmss = (ms) => {
-    const s = Math.floor(ms / 1000);
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  };
-
-  Game.showStats = function () {
-    const st = Game.stats;
-    const ms = st.startTime && st.endTime ? st.endTime - st.startTime : Game.timer.ms;
-    const run = { bounces: st.bounces, ms: Math.round(ms) };
-    const best = loadBestRun();
-    const isRecord = Game.timer.fullRun &&
-      (!best || run.bounces < best.bounces || (run.bounces === best.bounces && run.ms < best.ms));
-    if (isRecord) saveBestRun(run);
-    const shown = isRecord ? run : best;
-    const times = (n) => `${n} TIME${n === 1 ? '' : 'S'}`;
-
-    const page = make('div', 'bsod stats-screen');
-    Game.setSkin(page, 'bluescreen-bg.png');
-    const add = (cls, text) => { const el = make('div', cls, text); page.appendChild(el); return el; };
-    add('stats-headline', `YOUR EMAIL BOUNCED BACK ${times(st.bounces)}.\nYOU BOUNCED BACK ${times(st.bounces)}.`);
-    add('stats-list', [
-      `Rewrites: ${st.rewrites}`,
-      `Characters typed: ${st.charsTyped}`,
-      `Characters deleted: ${st.charsDeleted}`,
-      `Time: ${mmss(ms)} (real time)`,
-      `Clippy hints used: ${st.hintsUsed}`,
-      `Final clock: ${Game.clock.format(Game.clock.minutes)}`,
-    ].join('\n'));
-    const bestLine = add('stats-best',
-      shown ? `Best: ${shown.bounces} bounces, ${mmss(shown.ms)}` : 'Best: -');
-    if (isRecord) bestLine.appendChild(make('span', 'stats-record', 'NEW RECORD'));
-    if (!Game.timer.fullRun) add('stats-note', '(test run: started with ?stage= or a debug jump, so it does not count)');
-    add('stats-restart', 'Press any key to try again.');
-    Game.layers.overlay.appendChild(page);
-
-    // any key / click -> fresh game (after a short pause so a held key doesn't skip it)
-    setTimeout(() => {
-      const restart = () => Game.restart();
-      window.addEventListener('keydown', restart, { once: true });
-      page.addEventListener('pointerdown', restart, { once: true });
-    }, 900);
-    return page;
-  };
-
-  /** Back to the title screen with a completely fresh state. */
   Game.restart = function () {
     location.reload();
   };
 
-  /* ===========================================================================
-   *  11. DEBUG TOOLS — use from the browser console (F12)
-   *    Game.debug.list()        table of all loaded stages
-   *    Game.debug.skip()        pass the current stage instantly
-   *    Game.debug.goto(7)       jump to stage 7
-   *    Game.debug.missing()     art files that failed to load so far (missing, misnamed,
-   *                             or unreadable — e.g. a .heic renamed to .png)
-   *  URL options:  index.html?stage=7         start directly at stage 7 (skips title)
-   *                index.html?nodeadline=1    9:00 never fires you
-   *                index.html?freeze          the clock never moves
-   * ======================================================================== */
   Game.debug = {
     list() {
       console.table(Game.stages.map((s) => ({ id: s.id, name: s.name, todo: s.todo, final: s.final })));
@@ -2027,24 +1607,10 @@ window.Game = Game;
     missing() {
       return Array.from(missingAssets).sort();
     },
-    /** Show the end-of-run stats screen right now. */
-    stats() {
-      if (!Game.started) startGame(true);
-      Game.timer.stop();
-      Game.showStats();
-    },
   };
 
-  /* ===========================================================================
-   *  12. BOOT
-   * ======================================================================== */
   let loading = false;
 
-  /**
-   * Background PC fan: sounds/fan.wav loops for the whole game. Starts loud
-   * (CONFIG.FAN_START_VOLUME) and fades down to CONFIG.FAN_GAME_VOLUME over
-   * CONFIG.FAN_FADE_MS. Missing file = silent, as always.
-   */
   let fan = null;
   function startFan(quiet) {
     if (fan) return;
@@ -2065,15 +1631,10 @@ window.Game = Game;
   }
   Game.fan = { get audio() { return fan; } };
 
-  /**
-   * Start button: title -> loading screen (CONFIG.LOADING_MS, a filling bar) ->
-   * desktop + winxp.wav + Clippy's greeting. The clock only starts after loading.
-   * quiet = true (debug jumps like ?stage=N) skips the loading screen and the sound.
-   */
   function startGame(quiet) {
     if (Game.started) return;
     $('#title-screen').classList.add('hidden');
-    startFan(quiet); // loud on Start, then settles to a quiet hum
+    startFan(quiet);
     if (quiet) {
       beginPlay(true);
       return;
@@ -2087,7 +1648,7 @@ window.Game = Game;
     Game.runProgress(bar, CONFIG.LOADING_MS).then(() => {
       screenEl.classList.add('hidden');
       loading = false;
-      if (Game.started) return; // a debug jump happened meanwhile
+      if (Game.started) return;
       Game.sound('winxp.wav');
       beginPlay(false);
     });
@@ -2095,11 +1656,6 @@ window.Game = Game;
 
   let stopOutlookHighlight = null;
 
-  /**
-   * After loading: the desktop "boots" with Outlook closed. Clippy explains why
-   * you're here and only the Outlook Saga icon works. quiet (debug jumps) opens
-   * Outlook straight away.
-   */
   function beginPlay(quiet) {
     if (Game.started) return;
     Game.started = true;
@@ -2112,7 +1668,6 @@ window.Game = Game;
     stopOutlookHighlight = Game.highlight('#icon-outlook', 0);
   }
 
-  /** Open the Outlook Saga window (desktop icon / taskbar). Starts the 9:00 clock the first time. */
   function openMail(quiet) {
     const win = Game.mail.el.window;
     if (Game.mailOpen) {
@@ -2128,13 +1683,12 @@ window.Game = Game;
     Game.clock.start();
     fullRun = !quiet;
     Game.timer.start();
-    lastSentSnapshot = emailSnapshot(); // rewrites are counted from here
+    lastSentSnapshot = emailSnapshot();
     if (!quiet) Game.clippy.say(Game.line('general.greeting'), 'happy');
   }
   Game.openMail = openMail;
 
   function init() {
-    // Texts: clippy-lines.js must have loaded (and be valid JSON) before this point.
     if (!Game.lines || !Game.lines.general) {
       console.error('[Game] clippy-lines.js did not load or has a typo (check commas/quotes). All texts will show as [missing text].');
       Game.lines = Game.lines || {};
@@ -2155,17 +1709,14 @@ window.Game = Game;
     window.addEventListener('resize', fit);
     initSkins();
 
-    // Static art declared in index.html with data-asset="file.png"
     document.querySelectorAll('[data-asset]').forEach((box) => Game.setAsset(box, box.dataset.asset));
 
-    // ---- every button / desktop icon press plays button.wav (disabled buttons stay silent) ----
     document.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       const btn = e.target.closest && e.target.closest('button, .desktop-icon');
       if (btn && !btn.disabled && root.contains(btn)) Game.sound('button.wav');
     }, true);
 
-    // ---- mail window ----
     const m = Game.mail.el;
     m.window = $('#mail-window');
     m.from = $('#mail-from');
@@ -2181,12 +1732,12 @@ window.Game = Game;
 
     Game.mail.from = CONFIG.PLAYER_ADDRESS;
     m.to.value = CONFIG.BOSS_ADDRESS;
-    m.subject.value = ''; // the email starts with an EMPTY subject (stage 1)
+    m.subject.value = '';
     m.body.value = CONFIG.DEFAULT_BODY;
     m.status.textContent = CONFIG.STATUS_TEXT;
     m.body.addEventListener('input', Game.mail.updateCounter);
     m.subject.addEventListener('input', checkEasterEggs);
-    trackTyping(m.subject); // Game.stats.charsTyped / charsDeleted
+    trackTyping(m.subject);
     trackTyping(m.body);
     m.send.addEventListener('click', onSendClick);
     let lastNudgeTick = performance.now();
@@ -2208,7 +1759,6 @@ window.Game = Game;
     $('.xp-tb-close', m.window).addEventListener('click', () => talk(Game.line('general.mailClose')));
     $('.xp-tb-min', m.window).addEventListener('click', () => talk(Game.line('general.mailMinimize')));
     $('.xp-tb-max', m.window).addEventListener('click', () => talk(Game.line('general.mailMaximize')));
-    // Sarcastic reactions for the decorative parts of the mail client
     document.querySelectorAll('[data-tb]').forEach((btn) =>
       btn.addEventListener('click', () => talk(Game.line('general.toolbar.' + btn.dataset.tb)))
     );
@@ -2219,11 +1769,9 @@ window.Game = Game;
     $('#user-avatar').addEventListener('click', () => talk(Game.line('general.avatar'), 'happy'));
     $('#saga-logo').addEventListener('click', () => talk(Game.line('general.sagaLogo'), 'happy'));
 
-    // ---- taskbar ----
     clockEl = $('#clock');
     trayIcons = $('#tray-icons');
     renderClock();
-    // Until Outlook is open, everything except the Outlook icon just gets "open Outlook first".
     const needsOutlook = (fn) => (...args) => {
       if (Game.started && !Game.mailOpen) {
         talk(Game.line('general.openOutlookFirst'), 'happy');
@@ -2233,18 +1781,14 @@ window.Game = Game;
     };
     $('#start-button').addEventListener('click', needsOutlook(() => talk(Game.line('general.startButton'))));
     $('#task-mail').addEventListener('click', () => Game.bringToFront(m.window));
-    // Built-in tray icons (added right-to-left). Stages change them with
-    // Game.tray.setIcon / setText — and put them back in cleanup.
     Game.tray.add('battery', 'Battery', null, { persist: true, text: '100%' });
     Game.tray.add('wifi', 'Connected', null, { persist: true });
     Game.tray.add('volume', 'Volume', null, { persist: true });
 
-    // ---- default desktop icons (persist for the whole game) ----
     Game.addIcon({
       id: 'outlook', label: 'Outlook Saga', asset: 'app-icon.png', x: 16, y: 16, persist: true,
       onClick: () => { if (Game.started && !Game.over) openMail(); },
     });
-    // Desktop "apps": plain (empty) app windows — non-modal, draggable, one per app.
     const desktopApp = (id, title, icon, x, y) => needsOutlook(() =>
       Game.openApp({ id, title, icon, x, y, w: 360, h: 200, persist: true }));
     Game.addIcon({
@@ -2260,7 +1804,6 @@ window.Game = Game;
       onClick: desktopApp('folder', 'New Folder (37)', 'icon-folder.png', 210, 270),
     });
 
-    // ---- Clippy ----
     clippyEl = $('#clippy');
     clippyImg = $('#clippy-img');
     bubble = $('#clippy-bubble');
@@ -2268,7 +1811,6 @@ window.Game = Game;
     clippyImg.addEventListener('click', onClippyClick);
     bubble.addEventListener('click', () => Game.clippy.hide());
 
-    // ---- title screen + URL debug options ----
     $('#start-game').addEventListener('click', () => startGame());
     const params = new URLSearchParams(location.search);
     if (params.has('freeze')) Game.clock.freeze();

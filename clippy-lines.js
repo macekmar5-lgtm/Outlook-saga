@@ -1,22 +1,3 @@
-// =============================================================================
-//  OUTLOOK SAGA — ALL OF CLIPPY'S LINES (and each stage's error / hint)
-//  Edit the text below. Everything after "Game.lines =" is plain JSON:
-//    - text goes in "double quotes"
-//    - put a comma between items, but NOT after the last item in a { } or [ ]
-//    - a line break inside text is \n ;  a quote inside text is \"
-//    - {name} style placeholders are filled in by the game (keep them as-is)
-//  If the game shows "[missing text: ...]" or the console says this file
-//  failed, there's a JSON typo: paste everything between the outer { } into
-//  jsonlint.com to find it.
-//  (It's a .js file, not .json, because browsers can't load .json files when
-//  you double-click index.html.)
-//
-//  Per stage:  "error"  = the Mail Delivery Bounced popup text
-//              "clippy" = what Clippy says when the stage starts
-//              "hint"   = what Clippy says when you click him (costs a minute)
-//              "retry"  = Clippy lines when Send fails again (one is picked at random)
-//              "lines"  = Clippy's reactions during the stage
-// =============================================================================
 Game.lines = {
   "general": {
     "bootIntro": "Good morning! Well... it's 8:00 and you're not at work. Your boss (yes, the office printer. Long story.) expects you at your desk by 9:00. Let's email it an excuse. Open Outlook Saga, top left of the desktop!",

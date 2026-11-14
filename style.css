@@ -1,55 +1,5 @@
-/* =============================================================================
- *  OUTLOOK SAGA — style.css
- *
- *  ART RULE: CSS here only does LAYOUT, POSITIONING, TEXT and STRETCHING OUR
- *  IMAGES. No CSS-drawn visuals: no gradients, shadows, rounded corners,
- *  coloured boxes, drawn borders or shapes. Every visual is a file in /assets.
- *  (The one exception is the dashed "missing art" placeholder, which is a
- *  dev-time marker that disappears as soon as the art exists.)
- *
- *  Sections:
- *     1. ART LIST + 9-slice settings   <- every OS/UI art filename lives here
- *     2. Base + game screen
- *     3. Missing-art placeholders
- *     4. Windows, title bars, popups
- *     5. UI kit (buttons, fields, checkboxes, progress bars, keys)
- *     6. Desktop, taskbar, tray, desktop icons, props
- *     7. Mail client (toolbar, sidebar, compose, status bar, word view)
- *     8. Clippy
- *     9. Effects (motion only), drag ghosts, blackout
- *    10. Title screen + blue screen
- *    11. Cursors
- *    12. Text colours once the art exists
- *    13. Stage windows (layout only)
- * ========================================================================== */
-
-/* -----------------------------------------------------------------------------
- *  1. ART LIST + 9-SLICE SETTINGS
- *  -----------------------------------------------------------------------------
- *  How art gets on screen:
- *   SURFACES  — any element with  data-skin="file.png"  is drawn with that image.
- *               engine.js checks if the file exists and, if so, draws it with
- *               border-image: 9-slice when the file has a --slice-<name> entry
- *               below, otherwise stretched over the whole element.
- *               Missing file = dashed box with the filename on it.
- *   PICTURES  — Game.asset('file.png') / data-asset="file.png": an <img>,
- *               scaled to fit. Missing file = dashed box with the filename.
- *   CURSORS   — cursor.png is used everywhere once it exists; cursor-hand / text-cursor /
- *               cursor-loading replace it in their spots when they exist (section 11).
- *
- *  Files are loaded by filename; a JPG/WebP/AVIF saved as .png still works.
- *  (HEIC does not: run tools/fix-art.ps1.)
- *
- *  9-slice: draw ONE small picture. Its corners stay exactly as drawn; the
- *  edges and middle stretch to any size. Per file:
- *     --slice-<name>  pixels of YOUR DRAWING that are corner/edge
- *                     (1 value, or 4 values: top right bottom left)
- *     --frame-<name>  how thick that edge appears on screen (same 1 or 4 values)
- *  The middle of the drawing is the element's background.
- * -------------------------------------------------------------------------- */
 :root {
   --os-assets:
-    /* SURFACES (data-skin) — frames, bars, buttons, fields, panels */
     "window-frame.png" "titlebar.png" "popup-frame.png"
     "btn-close.png" "btn-minimize.png" "btn-maximize.png"
     "button.png" "button-pressed.png" "input-box.png"
@@ -62,7 +12,6 @@
     "progress-bar.png" "progress-fill.png"
     "captcha-frame.png" "drop-zone.png"
     "title-background.png" "loading-screen.png" "bluescreen-bg.png"
-    /* PICTURES (Game.asset) — icons */
     "app-icon.png" "saga-logo.png"
     "tb-new.png" "tb-reply.png" "tb-attach.png" "tb-delete.png" "tb-settings.png"
     "folder-inbox.png" "folder-outbox.png" "folder-sent.png" "folder-drafts.png" "folder-bounced.png" "folder-trash.png"
@@ -71,10 +20,8 @@
     "icon-error.png" "icon-warning.png" "icon-info.png"
     "icon-my-computer.png" "icon-folder.png" "icon-homework.png"
     "bluescreen-face.png"
-    /* CURSORS — 32x32 (Chrome ignores cursors bigger than 128x128) */
     "cursor.png" "cursor-hand.png" "cursor-loading.png" "text-cursor.png";
 
-  /* ---- 9-slice settings (files not listed here are simply stretched) ---- */
   --slice-window-frame: 12;          --frame-window-frame: 6px;
   --slice-popup-frame: 12;           --frame-popup-frame: 6px;
   --slice-titlebar: 8;               --frame-titlebar: 4px;
@@ -88,7 +35,7 @@
   --slice-taskbar: 6;                --frame-taskbar: 3px;
   --slice-taskbar-button: 6;         --frame-taskbar-button: 4px;
   --slice-tray: 6;                   --frame-tray: 3px;
-  --slice-speech-bubble: 16 16 32 16; --frame-speech-bubble: 12px 12px 24px 12px; /* bottom is taller: draw the tail there */
+  --slice-speech-bubble: 16 16 32 16; --frame-speech-bubble: 12px 12px 24px 12px;
   --slice-highlight-frame: 10;       --frame-highlight-frame: 6px;
   --slice-key: 6;                    --frame-key: 4px;
   --slice-key-pressed: 6;            --frame-key-pressed: 4px;
@@ -96,47 +43,38 @@
   --slice-progress-bar: 4;           --frame-progress-bar: 3px;
   --slice-captcha-frame: 14;         --frame-captcha-frame: 8px;
   --slice-drop-zone: 12;             --frame-drop-zone: 6px;
-  /* how edges fill: stretch | repeat | round | space */
   --repeat-mode: stretch;
 
-  /* ---- text colours (text is font-rendered; pick colours that read on your art).
-          Until the art exists, text stays --text so it reads on the placeholders. ---- */
   --text: #000;
-  --titlebar-text: #000;   /* our titlebar.png is light */
-  --taskbar-text: #000;    /* our taskbar.png is light grey */
+  --titlebar-text: #000;
+  --taskbar-text: #000;
   --desktop-text: #fff;
   --title-text: #fff;
+  --title-screen-text: #111;
   --bsod-text: #fff;
   --clock-late-text: #ff3030;
   --clickable-word-text: #c00000;
-  --rule-fail-text: #c00000;   /* stage 15 password rules */
+  --rule-fail-text: #c00000;
   --rule-pass-text: #007a00;
-  --world-text: #fff;          /* stage 13 battery readout on the desk art */
+  --world-text: #fff;
 
-  /* ---- cursor hotspots: "x y" in pixels inside the cursor image ---- */
-  --hotspot-cursor: 2 2;          /* tip of the arrow in cursor.png */
-  --hotspot-cursor-hand: 10 6;    /* fingertip in cursor-hand.png */
-  --hotspot-cursor-loading: 14 18; /* centre of cursor-loading.png */
+  --hotspot-cursor: 2 2;
+  --hotspot-cursor-hand: 10 6;
+  --hotspot-cursor-loading: 14 18;
   --hotspot-text-cursor: 16 16;
 
-  /* ---- dev-only look of MISSING art (vanishes once the file exists).
-          The flat fill keeps overlapping placeholder windows readable. ---- */
   --placeholder-line: #ff2bd6;
   --placeholder-label: #b0008a;
   --placeholder-fill: #ececec;
 }
 
-/* -----------------------------------------------------------------------------
- *  2. BASE + GAME SCREEN
- *  #game is always 1280x720; engine.js scales it with a transform.
- * -------------------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #000; /* letterbox bars outside the game screen (and the blackout) */
+  background: #000;
 }
 
 body {
@@ -146,7 +84,6 @@ body {
   user-select: none;
 }
 
-/* Strip every browser-drawn visual: button faces, field borders, focus rings, scrollbars. */
 button {
   margin: 0;
   padding: 0;
@@ -184,12 +121,10 @@ canvas { display: block; }
 }
 #screen { position: absolute; inset: 0; overflow: hidden; }
 
-/* Full-screen layers ignore clicks themselves; their children don't. */
 .layer { position: absolute; inset: 0; pointer-events: none; }
 .layer > * { pointer-events: auto; }
 
 #desktop { position: absolute; inset: 0; }
-/* wallpaper.png is 1280x680: exactly the desktop area above the 40px taskbar */
 #wallpaper { position: absolute; left: 0; top: 0; width: 1280px; height: 680px; }
 #layer-icons     { z-index: 1; }
 #layer-windows   { z-index: 2; }
@@ -204,14 +139,6 @@ canvas { display: block; }
 #title-screen    { z-index: 40; }
 #loading-screen  { z-index: 45; }
 
-/* -----------------------------------------------------------------------------
- *  3. MISSING-ART PLACEHOLDERS  (dev-time only)
- *  Surfaces: every [data-skin] starts as a dashed box with its filename. The
- *  engine overrides this per file once the image has loaded.
- *  Pictures: Game.asset() boxes get .asset-missing when the file fails.
- *  Keep this block FIRST among the element rules so layouts can override
- *  `position`.
- * -------------------------------------------------------------------------- */
 [data-skin] {
   position: relative;
   outline: 2px dashed var(--placeholder-line);
@@ -265,16 +192,12 @@ canvas { display: block; }
 }
 #wallpaper.asset-missing { font-size: 22px; background-color: #d4d4d4; }
 
-/* -----------------------------------------------------------------------------
- *  4. WINDOWS, TITLE BARS, POPUPS   (skins: window-frame, titlebar, popup-frame,
- *                                    btn-close/minimize/maximize)
- * -------------------------------------------------------------------------- */
 .xp-window {
   position: absolute;
   display: flex;
   flex-direction: column;
 }
-.xp-window::after { top: -13px; left: 0; } /* frame label sits just above the window */
+.xp-window::after { top: -13px; left: 0; }
 
 .xp-titlebar {
   flex: none;
@@ -291,12 +214,11 @@ canvas { display: block; }
 .xp-title-icon { width: 16px; height: 16px; }
 .xp-title-buttons { display: flex; gap: 2px; }
 .xp-tb-btn { width: 21px; height: 21px; flex: none; }
-.xp-tb-btn::after { font-size: 6px; line-height: 7px; left: 1px; } /* tiny label in a tiny button */
+.xp-tb-btn::after { font-size: 6px; line-height: 7px; left: 1px; }
 
 .xp-body { flex: 1; position: relative; padding: 10px; overflow: auto; }
 .app-text { white-space: pre-line; line-height: 1.45; padding: 6px 4px; }
 
-/* Popups (Game.popup) */
 .popup-blocker {
   position: absolute;
   inset: 0;
@@ -319,10 +241,6 @@ canvas { display: block; }
 .popup-icon { width: 42px; height: 42px; }
 .popup-buttons { display: flex; justify-content: center; gap: 8px; padding: 8px 14px 16px; }
 
-/* -----------------------------------------------------------------------------
- *  5. UI KIT  (Game.ui.* — skins: button, button-pressed, input-box, checkbox,
- *              checkbox-checked, progress-bar, progress-fill, key, key-pressed)
- * -------------------------------------------------------------------------- */
 .ui-btn {
   min-width: 75px;
   height: 26px;
@@ -359,10 +277,6 @@ canvas { display: block; }
 
 .ui-key { min-width: 40px; height: 40px; padding: 0 8px; font-size: 16px; font-weight: bold; }
 
-/* -----------------------------------------------------------------------------
- *  6. DESKTOP, TASKBAR, TRAY, DESKTOP ICONS, PROPS
- *     (skins: taskbar, start-button, taskbar-button, tray; icons via Game.asset)
- * -------------------------------------------------------------------------- */
 .desktop-icon {
   position: absolute;
   width: 88px;
@@ -388,8 +302,6 @@ canvas { display: block; }
   align-items: stretch;
 }
 #taskbar::after { left: 600px; }
-/* start-button.png is 120x40: the negative margins let it cover the taskbar's
-   frame edge so it shows at its real size */
 #start-button { width: 120px; flex: none; }
 #game.skin-taskbar #start-button {
   margin: calc(-1 * var(--frame-taskbar)) 0 calc(-1 * var(--frame-taskbar)) calc(-1 * var(--frame-taskbar));
@@ -409,7 +321,6 @@ canvas { display: block; }
 #tray-icons { display: flex; align-items: center; gap: 4px; }
 .tray-item { display: flex; align-items: center; gap: 3px; height: 24px; padding: 0 2px; font-size: 11px; font-weight: bold; white-space: nowrap; }
 .tray-icon { width: 20px; height: 20px; }
-/* stage 7: its tray icon is bigger (size set in the stage via iconW/iconH) */
 .tray-item.tray-keyboard { height: 32px; }
 .tray-icon.asset-missing { font-size: 5px; line-height: 6px; padding: 0; }
 #clock { font-size: 12px; padding: 0 2px; min-width: 58px; text-align: center; }
@@ -417,23 +328,15 @@ canvas { display: block; }
 #clock.late { color: var(--clock-late-text); animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0.35; } }
 
-/* -----------------------------------------------------------------------------
- *  7. MAIL CLIENT
- *     skins: window-frame, titlebar, input-box, format-bar, body-paper,
- *            attach-chip, char-counter-bg, btn-send(-pressed), statusbar
- *     pictures: app-icon, saga-logo, tb-*, folder-*, ad-banner, user-avatar
- * -------------------------------------------------------------------------- */
 #mail-window { left: 116px; top: 6px; width: 914px; height: 668px; }
-#mail-window.opening { animation: popup-in 0.2s ease-out; } /* when the player opens Outlook */
+#mail-window.opening { animation: popup-in 0.2s ease-out; }
 
-/* toolbar */
 .mail-toolbar { flex: none; display: flex; align-items: center; gap: 4px; height: 58px; padding: 4px 8px; }
 #saga-logo { width: 120px; height: 40px; margin-right: 10px; }
 .tb-btn { width: 56px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; }
 .tb-icon { width: 28px; height: 28px; }
 #ad-banner { width: 120px; height: 44px; margin-left: auto; }
 
-/* sidebar + compose side by side */
 .mail-main { flex: 1; min-height: 0; display: flex; }
 .mail-sidebar { flex: none; width: 150px; display: flex; flex-direction: column; gap: 2px; padding: 6px 6px 8px; }
 .folder { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 6px; font-size: 12px; white-space: nowrap; }
@@ -471,22 +374,17 @@ canvas { display: block; }
 #char-counter { padding: 4px 12px; font-size: 12px; }
 #char-counter.over { color: #c00; font-weight: bold; }
 .send-btn { height: 40px; width: 110px; font-size: 15px; font-weight: bold; }
-/* btn-send.png (110x40) has its own label drawn in: hide the text once the art exists */
 #game.skin-btn-send .send-btn { font-size: 0; }
 
 .mail-statusbar { flex: none; display: flex; align-items: center; gap: 12px; height: 26px; padding: 0 10px; font-size: 11px; }
 #status-text { flex: none; }
-#bounce-meter { flex: 1; font-weight: bold; white-space: nowrap; } /* "Bounces: 7 · Rewrites: 5" (engine renderBounces) */
+#bounce-meter { flex: 1; font-weight: bold; white-space: nowrap; }
 #send-progress { display: flex; align-items: center; gap: 6px; width: 230px; }
 #send-progress .ui-progress { height: 14px; flex: 1; }
 
-/* clickable word view (Game.wordView) — replaces the textarea for some stages */
 .word-view { flex: 1; overflow: auto; white-space: pre-wrap; font: 15px/1.5 Arial, sans-serif; }
 .word { font-weight: bold; color: var(--clickable-word-text); }
 
-/* -----------------------------------------------------------------------------
- *  8. CLIPPY   (art: clippy-<mood>.png; skin: speech-bubble)
- * -------------------------------------------------------------------------- */
 #clippy {
   position: absolute;
   right: 24px;
@@ -511,7 +409,7 @@ canvas { display: block; }
   right: 30px;
   bottom: 132px;
   width: 300px;
-  padding: 14px 16px 30px; /* extra room at the bottom for the drawn tail */
+  padding: 14px 16px 30px;
   font-size: 13px;
   line-height: 1.4;
   pointer-events: auto;
@@ -520,9 +418,6 @@ canvas { display: block; }
 #clippy-bubble.pop { animation: bubble-pop 0.2s ease-out; }
 @keyframes bubble-pop { from { transform: scale(0.8); opacity: 0; } }
 
-/* -----------------------------------------------------------------------------
- *  9. EFFECTS (motion only — no drawing), DRAG GHOSTS, BLACKOUT
- * -------------------------------------------------------------------------- */
 .highlight-frame {
   position: absolute;
   animation: highlight-pulse 0.6s ease-in-out infinite alternate;
@@ -530,7 +425,7 @@ canvas { display: block; }
 @keyframes highlight-pulse { from { opacity: 1; } to { opacity: 0.3; } }
 
 #screen.shake { animation: shake 0.35s; }
-@keyframes shake { /* --shake = strength (Game.shake(strength)) */
+@keyframes shake {
   20% { translate: calc(var(--shake, 1) * -8px) calc(var(--shake, 1) * 3px); }
   40% { translate: calc(var(--shake, 1) * 7px) calc(var(--shake, 1) * -4px); }
   60% { translate: calc(var(--shake, 1) * -5px) calc(var(--shake, 1) * 2px); }
@@ -544,7 +439,6 @@ canvas { display: block; }
 
 .flying-envelope { position: absolute; width: 64px; height: 48px; }
 
-/* Game.blackout(): hide everything; the black page background shows through */
 #screen.blackout > :not(#layer-overlay) { visibility: hidden; }
 .blackout-text {
   position: absolute;
@@ -556,9 +450,6 @@ canvas { display: block; }
   font: 40px "Segoe UI", Tahoma, sans-serif;
 }
 
-/* -----------------------------------------------------------------------------
- *  10. TITLE SCREEN + BLUE SCREEN  (skins: title-background, bluescreen-bg)
- * -------------------------------------------------------------------------- */
 #title-screen {
   position: absolute;
   inset: 0;
@@ -568,11 +459,11 @@ canvas { display: block; }
   justify-content: center;
   gap: 28px;
 }
-#title-logo { width: 600px; height: 200px; } /* title-logo.png is 600x200 */
+#title-logo { width: 600px; height: 200px; }
 #start-game { height: 50px; min-width: 210px; font-size: 22px; font-weight: bold; }
 .title-tagline { font-size: 15px; letter-spacing: 0.5px; }
+.title-credit { font-size: 22px; font-style: italic; line-height: 1.3; text-align: center; }
 
-/* Loading screen after Start (skin: loading-screen.png, bar: progress-bar/progress-fill) */
 #loading-screen {
   position: absolute;
   inset: 0;
@@ -586,9 +477,7 @@ canvas { display: block; }
 .loading-text { font-size: 16px; letter-spacing: 0.5px; }
 #loading-bar-slot { width: 320px; }
 #loading-bar-slot .ui-progress { height: 18px; }
-.loading-credit { position: absolute; right: 24px; bottom: 18px; font-size: 13px; font-style: italic; }
 
-/* Blue screen (built by stages/18-final-bluescreen.js) */
 .bsod {
   position: absolute;
   inset: 0;
@@ -601,22 +490,7 @@ canvas { display: block; }
 .bsod-small { font-size: 16px; line-height: 1.7; }
 .bsod-restart { margin-top: 28px; font-size: 18px; animation: blink 1s steps(2) infinite; }
 
-/* End screen after the blue screen (Game.showStats): same art + text colour as .bsod */
-.stats-screen { padding: 70px 150px; animation: stats-in 0.5s ease-out both; }
-@keyframes stats-in { from { opacity: 0; } }
-.stats-headline { font-size: 40px; font-weight: bold; line-height: 1.3; white-space: pre-line; margin-bottom: 34px; }
-.stats-list { font-size: 24px; line-height: 1.6; white-space: pre-line; margin-bottom: 30px; }
-.stats-best { font-size: 22px; font-weight: bold; }
-.stats-record { margin-left: 18px; animation: blink 0.8s steps(2) infinite; }
-.stats-note { font-size: 14px; margin-top: 6px; opacity: 0.8; }
-.stats-restart { margin-top: 34px; font-size: 20px; animation: blink 1s steps(2) infinite; }
 
-/* -----------------------------------------------------------------------------
- *  11. CURSORS — our art when it exists, otherwise the normal system cursor
- * -------------------------------------------------------------------------- */
-/* Four cursor "slots". Each uses its own art if it exists; otherwise, as soon as
-   cursor.png exists, it uses cursor.png (so the system cursor never shows);
-   with no cursor art at all it falls back to the normal system cursor. */
 #game {
   --cur-default: default;
   --cur-hand: pointer;
@@ -634,60 +508,42 @@ canvas { display: block; }
 #game.skin-cursor-loading { --cur-busy: var(--img-cursor-loading) var(--hotspot-cursor-loading), progress; }
 
 #game, #game * { cursor: var(--cur-default); }
-/* :where() keeps these at the same strength as the line above, so order decides.
-   The second selector gives the hand to everything INSIDE a clickable thing too
-   (icon picture, label, button text), so the whole thing shows the hand. */
 #game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .captcha-cell, .tray-item.clickable, .sig-pad canvas),
 #game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .captcha-cell, .tray-item.clickable) * { cursor: var(--cur-hand); }
 #game :where(input:not([readonly]), textarea) { cursor: var(--cur-text); }
 #game :where(button:disabled, button:disabled *, .ui-checkbox.read-only, .ui-checkbox.read-only *) { cursor: var(--cur-default); }
-/* busy (while the envelope is flying) — keep last so it wins */
 #game.busy, #game.busy * { cursor: var(--cur-busy) !important; }
-#game.busy #screen { pointer-events: none; } /* no clicks while the envelope is flying (send()) */
+#game.busy #screen { pointer-events: none; }
 
-/* -----------------------------------------------------------------------------
- *  12. TEXT COLOURS ONCE THE ART EXISTS
- *  (#game gets .skin-<name> when <name>.png loaded; until then text stays
- *   --text so it reads on the light placeholders)
- * -------------------------------------------------------------------------- */
 #game.skin-titlebar .xp-titlebar             { color: var(--titlebar-text); }
 #game.skin-taskbar #taskbar                  { color: var(--taskbar-text); }
 #game.skin-wallpaper .desktop-icon-label     { color: var(--desktop-text); }
-#game.skin-title-background .title-tagline   { color: var(--title-text); }
+#game.skin-title-background .title-tagline   { color: var(--title-screen-text); }
+#game.skin-title-background .title-credit    { color: var(--title-screen-text); }
 #game.skin-loading-screen .loading-text      { color: var(--title-text); }
-#game.skin-loading-screen .loading-credit    { color: var(--title-text); }
 #game.skin-bluescreen-bg .bsod               { color: var(--bsod-text); }
 
-/* -----------------------------------------------------------------------------
- *  13. STAGE WINDOWS (layout only — the art comes from the files named in each stage)
- * -------------------------------------------------------------------------- */
 .stage-col { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
 .stage-row { display: flex; gap: 8px; align-items: center; }
 .stage-center { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
 .stage-msg { min-height: 18px; font-weight: bold; }
 .stage-note { font-size: 12px; opacity: 0.8; }
 
-/* stage 3: Recycle Bin window (trash-*.png + the attachment icons) */
 .bin-list { display: flex; flex-direction: column; gap: 6px; height: 170px; margin-bottom: 10px; }
 .bin-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .bin-size { margin-left: auto; font-size: 11px; opacity: 0.75; }
 
-/* stage 4: the player drags a hydraulic press (press.png) down onto the cat photo, which
-   squishes live (motion on our own art: scale, no drawing). Sizes/limits are in the stage file. */
 .press-rig { position: relative; width: 300px; height: 300px; }
 .press-rig .press-cat { position: absolute; left: 0; bottom: 0; transform-origin: 50% 100%; }
 .press-rig .press-head { position: absolute; left: 30px; top: 0; touch-action: none; }
 .press-rig .press-head.locked { cursor: default; }
 
-/* stage 6: Convertinator drop zone (drop-zone.png) */
 .drop-zone { height: 110px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; }
 
-/* stage 7: on-screen keyboard (keyboard-frame.png + key.png) */
 .kbd-panel { padding: 12px; }
 .kbd-keys { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
 .kbd-keys .ui-key { min-width: 44px; }
 .kbd-keys .kbd-wide { min-width: 140px; }
-/* stage 7: My Computer file browser (icons are icon-folder.png / file-*.png) + Notepad */
 .fs-top, .fs-bottom { display: flex; align-items: center; gap: 8px; height: 30px; }
 .fs-path { flex: 1; font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fs-page { flex: 1; text-align: center; font-size: 12px; }
@@ -696,33 +552,26 @@ canvas { display: block; }
 .fs-label { font-size: 11px; line-height: 1.15; max-height: 2.3em; overflow: hidden; overflow-wrap: anywhere; }
 .notepad-text { white-space: pre-wrap; font-family: 'Lucida Console', 'Courier New', monospace; font-size: 12px; line-height: 1.4; }
 
-/* stage 9: WinRAWR nag */
 .winrawr-body { position: relative; height: 100%; }
 .winrawr-text { position: absolute; left: 130px; top: 10px; right: 10px; white-space: pre-line; line-height: 1.4; }
 .winrawr-logo { position: absolute; left: 10px; top: 10px; }
 .winrawr-face { font-size: 44px; font-weight: bold; }
 .winrawr-body .ui-btn { position: absolute; }
 
-/* stage 11: signature pad (signature-pad.png under a drawing canvas) */
 .sig-pad { position: relative; width: 480px; height: 200px; }
 .sig-pad > canvas { position: absolute; inset: 0; }
 
-/* stage 12: mood meter (mood-meter.png + rotating mood-needle.png) */
 .mood-dial { position: relative; width: 200px; height: 110px; margin: 0 auto; }
 .mood-needle { position: absolute; left: 95px; bottom: 0; transform-origin: 50% 100%; transition: transform 0.4s ease-out; }
 .mood-label { font-size: 18px; font-weight: bold; text-align: center; }
 
-/* stage 13: the camera zooms out of the screen into the "real world" (desk + laptop).
-   .world-back sits behind #screen, .world-front in front of it; both only show while zoomed out. */
 .world { position: absolute; inset: 0; display: none; transform-origin: 0 0; }
 #game.zoomed-out .world { display: block; }
 .world-front, .world-hud { pointer-events: none; }
 .world-front > .world-plug { pointer-events: auto; }
 .world-bg, .world-laptop, .world-plug, .world-port { position: absolute; }
-/* plugged in: the charger turns 90 degrees left so its prongs point into the port */
 .world-plug.plugged-in { rotate: -90deg; transition: rotate 0.25s ease-out, left 0.25s ease-out, top 0.25s ease-out; }
 .world-bg { left: 0; top: 0; }
-/* the laptop placeholder must stay see-through, or it would hide the game in the screen hole */
 .world-laptop.asset-missing { background-color: transparent; }
 .world-text {
   position: absolute; left: 0; right: 0; top: 24px;
@@ -730,33 +579,26 @@ canvas { display: block; }
   font: bold 30px Tahoma, sans-serif; color: var(--text);
 }
 #game.skin-desk-background .world-text { color: var(--world-text); }
-/* the readout fades in once the camera has pulled back a bit */
 .world-hud .world-text { animation: hud-in 0.5s ease-out 0.9s both; }
 @keyframes hud-in { from { opacity: 0; transform: translateY(-10px); } }
 
-/* stage 14: webcam */
 .webcam-preview { transition: filter 0.3s; }
 .webcam-preview.blurry { filter: blur(6px); }
 
-/* stage 15: account form */
 .rule-list { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
-/* rule state is also shown in the text colour (readable even without checkbox art) */
 .rule-list .ui-checkbox { color: var(--rule-fail-text); }
 .rule-list .ui-checkbox.is-checked { color: var(--rule-pass-text); }
 
-/* stage 16: bus captcha. One picture (captcha-bus.png) cut into 4x4 squares by
-   positioning; the 4px gaps show captcha-frame.png behind them = the grid lines. */
 .captcha-header { width: 412px; padding: 12px 18px; text-align: left; }
 .captcha-header-small { font-size: 13px; }
 .captcha-header-big { font-size: 26px; font-weight: bold; line-height: 1.2; }
-#game.skin-captcha-header .captcha-header { color: #fff; } /* white text on the blue header art */
+#game.skin-captcha-header .captcha-header { color: #fff; }
 .captcha-grid { display: grid; grid-template-columns: repeat(4, 100px); gap: 4px; padding: 0; width: 412px; }
 .captcha-cell { position: relative; width: 100px; height: 100px; }
 .captcha-crop { position: absolute; inset: 0; overflow: hidden; transition: transform 0.12s; }
 .captcha-pic { position: absolute; }
-.captcha-cell.selected .captcha-crop { transform: scale(0.82); } /* real captchas shrink the square */
+.captcha-cell.selected .captcha-crop { transform: scale(0.82); }
 .captcha-tick { position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; }
-/* dev-only: until captcha-bus.png exists, show each square as a numbered placeholder */
 #game:not(.skin-captcha-bus) .captcha-cell { outline: 2px dashed var(--placeholder-line); outline-offset: -2px; }
 #game:not(.skin-captcha-bus) .captcha-cell::after {
   content: attr(data-n);

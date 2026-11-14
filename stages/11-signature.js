@@ -1,24 +1,10 @@
-/* =============================================================================
- *  STAGE 11 — Signature required                                 STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    A Signature Pad window: signature-pad.png with a drawing canvas on top.
- *    Draw with the mouse (black, 3px, slightly wobbly), then "Submit signature".
- *    Too little ink (total stroke < 150px): "That's a dot. Try harder."
- *    Otherwise a random server comment pops up and "[signature.png]" is added
- *    to the end of the body.  Pass: signature accepted.
- *
- *  ASSETS: signature-pad.png  (the strokes are the PLAYER's drawing — allowed)
- * ========================================================================== */
-
 (function () {
-  const MIN_INK = 150; // server comments: clippy-lines.js -> "11" -> lines.serverComments
+  const MIN_INK = 150;
 
   Game.registerStage({
     id: 11,
     name: 'Signature',
     vibe: 'angry',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "11"
     assets: ['signature-pad.png'],
 
     setup(G) {

@@ -1,16 +1,3 @@
-/* =============================================================================
- *  STAGE 8 — Attachments must be one zipped folder               STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    A "New Folder.zip" icon appears on the desktop (bottom left). Drag every
- *    attachment chip onto it: chips disappear into it and the icon counts them.
- *    When all are inside, drag the zip icon INTO the mail window: it becomes
- *    the single attachment "New Folder.zip".
- *    Pass: exactly one attachment and it ends in .zip.
- *
- *  ASSETS: icon-zip.png
- * ========================================================================== */
-
 (function () {
   const ZIP = 'New Folder.zip';
 
@@ -18,11 +5,9 @@
     id: 8,
     name: 'Zip folder',
     vibe: 'annoyed',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "8"
     assets: ['icon-zip.png'],
 
     setup(G) {
-      // Need something to zip (also when jumped to directly).
       if (!G.attachments.list().some((a) => !/\.zip$/i.test(a.name))) {
         G.attachments.add('cat.png', '3 MB', 'file-photo.png');
         G.attachments.add('excuse.docx', '18 KB', 'file-doc.png');
@@ -32,7 +17,6 @@
       const zip = G.addIcon({ id: 'zip', label: `${ZIP} (0)`, asset: 'icon-zip.png', x: 16, y: 470 });
       G.timeout(() => G.highlight(zip, 3000), 600);
 
-      // 1) chips -> zip
       G.dragAttachments((att, point) => {
         if (!G.hitTest(zip, point)) return;
         if (/\.zip$/i.test(att.name)) {
@@ -48,7 +32,6 @@
         }
       });
 
-      // 2) zip -> email
       G.dragGhost(zip, {
         onDrop(point) {
           if (!G.hitTest(G.mail.el.window, point)) return;

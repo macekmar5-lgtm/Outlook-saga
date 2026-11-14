@@ -1,21 +1,5 @@
 <!DOCTYPE html>
-<!--
-  OUTLOOK SAGA — a "BOUNCE BACK" game jam game.
-  Open this file directly in Chrome, or upload the folder (zipped) to itch.io as an HTML game.
 
-  ART RULE: every visual comes from /assets. Elements with data-skin="file.png" are drawn
-  with that image (9-slice or stretched, see the top of style.css); elements with
-  data-asset="file.png" show it as a picture. Missing files show a dashed placeholder box
-  with the filename, so the artists can see what still needs drawing.
-
-  Layer order inside #screen (bottom -> top):
-    #desktop          wallpaper, desktop icons, windows (incl. the mail window), Clippy, taskbar
-    #layer-highlight  pulsing highlight frames (Game.highlight)
-    #layer-popups     modal dialogs (Game.popup)
-    #layer-fx         the flying envelope, drag ghosts (never clickable)
-    #layer-overlay    full-screen takeovers (blue screen, blackout text)
-    #title-screen     covers everything until Start is pressed
--->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -27,18 +11,13 @@
   <div id="game">
     <div id="screen">
 
-      <!-- ================= DESKTOP ================= -->
       <div id="desktop">
         <div id="wallpaper" class="asset" data-asset="wallpaper.png"></div>
 
-        <!-- Desktop icons + props (Game.addIcon / Game.addProp) -->
         <div id="layer-icons" class="layer"></div>
 
-        <!-- Windows (Game.openWindow). The mail window lives here too. -->
         <div id="layer-windows" class="layer">
 
-          <!-- ===== The Outlook Saga mail client ===== -->
-          <!-- hidden at boot: opens when the player clicks the Outlook Saga desktop icon -->
           <div id="mail-window" class="xp-window hidden" data-skin="window-frame.png">
             <div class="xp-titlebar" data-skin="titlebar.png">
               <div class="asset xp-title-icon" data-asset="app-icon.png"></div>
@@ -50,7 +29,6 @@
               </div>
             </div>
 
-            <!-- Toolbar: logo, (useless) buttons, ad -->
             <div class="mail-toolbar">
               <div id="saga-logo" class="asset clickable" data-asset="saga-logo.png" title="Outlook Saga"></div>
               <button class="tb-btn" data-tb="new"><span class="asset tb-icon" data-asset="tb-new.png"></span><span>New</span></button>
@@ -62,7 +40,6 @@
             </div>
 
             <div class="mail-main">
-              <!-- Left sidebar: folders + user -->
               <div class="mail-sidebar">
                 <div class="folder clickable" data-folder="inbox"><span class="asset folder-icon" data-asset="folder-inbox.png"></span><span>Inbox</span></div>
                 <div class="folder clickable" data-folder="outbox"><span class="asset folder-icon" data-asset="folder-outbox.png"></span><span>Outbox (1)</span></div>
@@ -76,7 +53,6 @@
                 </div>
               </div>
 
-              <!-- Compose area -->
               <div class="mail-compose">
                 <div class="mail-fields">
                   <label for="mail-from">From:</label>
@@ -97,7 +73,6 @@
                   <div id="attach-list"></div>
                 </div>
 
-                <!-- Stages may swap this for a clickable word view (Game.wordView). -->
                 <div id="mail-body-wrap" class="ui-field multiline" data-skin="body-paper.png">
                   <textarea id="mail-body" spellcheck="false"></textarea>
                 </div>
@@ -117,7 +92,6 @@
           </div>
         </div>
 
-        <!-- Clippy -->
         <div id="clippy" data-mood="happy">
           <div id="clippy-bubble" class="hidden" data-skin="speech-bubble.png">
             <div id="clippy-text"></div>
@@ -125,7 +99,6 @@
           <div id="clippy-img" class="asset" data-asset="clippy-happy.png" title="Click for a hint (costs 1 minute)"></div>
         </div>
 
-        <!-- Taskbar -->
         <div id="taskbar" data-skin="taskbar.png">
           <button id="start-button" data-skin="start-button.png" aria-label="start"></button>
           <div id="taskbar-tasks">
@@ -142,34 +115,27 @@
         </div>
       </div>
 
-      <!-- ================= LAYERS ABOVE THE DESKTOP ================= -->
       <div id="layer-highlight" class="layer"></div>
       <div id="layer-popups" class="layer"></div>
       <div id="layer-fx" class="layer"></div>
       <div id="layer-overlay" class="layer"></div>
 
-      <!-- ================= LOADING SCREEN (after Start, CONFIG.LOADING_MS) ================= -->
       <div id="loading-screen" class="hidden" data-skin="loading-screen.png">
         <div class="loading-text">Starting dihdows xp</div>
         <div id="loading-bar-slot"></div>
-        <div class="loading-credit">All painted in Microsoft Paint</div>
       </div>
 
-      <!-- ================= TITLE SCREEN ================= -->
       <div id="title-screen" data-skin="title-background.png">
         <div id="title-logo" class="asset" data-asset="title-logo.png"></div>
         <button id="start-game" class="ui-btn" data-skin="button.png" data-skin-pressed="button-pressed.png">Start</button>
         <div class="title-tagline">Send ONE email to your boss, the printer. How hard can it be?</div>
+        <div class="title-credit">All painted<br>in Microsoft Paint</div>
       </div>
 
     </div>
   </div>
 
-  <!-- ===== SCRIPTS: engine first, then one file per stage. =====
-       A missing stage file just logs a 404 and is skipped. To add a stage,
-       add its <script> tag here (order doesn't matter: stages sort by id). -->
   <script src="engine.js"></script>
-  <!-- All texts: Clippy's lines, errors, hints. Edit this file to change what's said. -->
   <script src="clippy-lines.js"></script>
   <script src="stages/01-no-subject.js"></script>
   <script src="stages/02-caps-lock.js"></script>

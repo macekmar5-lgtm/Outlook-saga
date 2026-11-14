@@ -1,21 +1,3 @@
-/* =============================================================================
- *  STAGE 15 — Your boss has blocked you                          STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    The printer blocked you. A "Create a new Outlook Saga account" window has
- *    Username, Password and Create. Password rules appear one at a time: every
- *    failed attempt reveals the next rule. All revealed rules are checked live
- *    (checkbox.png / checkbox-checked.png):
- *      1 at least 8 characters   2 a number   3 an uppercase letter
- *      4 a fruit (apple, banana, kiwi, mango, pear, plum, grape, lemon)
- *      5 the word "bounce"       6 a month name   7 your boss's job: "printer"
- *    When all 7 pass, the account is created and the email's From becomes the
- *    new username.  Pass: account created.
- *    Example password that passes everything:  Bounce8kiwiMayprinter
- *
- *  ASSETS: checkbox.png, checkbox-checked.png (shared UI kit art)
- * ========================================================================== */
-
 (function () {
   const MONTHS = /(january|february|march|april|may|june|july|august|september|october|november|december)/i;
   const RULES = [
@@ -32,7 +14,6 @@
     id: 15,
     name: 'Boss blocked you',
     vibe: 'panic',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "15"
     assets: ['checkbox.png', 'checkbox-checked.png'],
 
     setup(G) {

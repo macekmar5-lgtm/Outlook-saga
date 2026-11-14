@@ -1,26 +1,5 @@
-/* =============================================================================
- *  STAGE 7 — Keyboard disconnected + the recovery phrase in My Computer   DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    The real keyboard is blocked everywhere (a "Keyboard disconnected" item
- *    appears in the tray) and the subject is wiped. To reconnect, the subject
- *    must be your 3-word KEYBOARD RECOVERY PHRASE.
- *    1. Find it: open My Computer (desktop icon, top left). It's a giant fake
- *       file system (folders, pages of files, System32...). The phrase is in
- *       "keyboard recovery phrase.txt", buried in one deep folder (random each
- *       game). Decoys: an (OLD) one, a "- Copy" one and a ".txt.exe".
- *       Clicking a .txt opens it in Notepad.
- *    2. Type it: an on-screen keyboard (A-Z + Space + Backspace). After EVERY
- *       key press all the letter keys reshuffle.
- *    Pass: subject == the 3 words (any caps, spaces between).
- *    The hint (click Clippy) tells the folder.
- *
- *  ASSETS: keyboard-frame.png, key.png, key-pressed.png, tray-keyboard-off.png,
- *          icon-my-computer.png, icon-folder.png, file-doc.png, file-exe.png, file-photo.png
- * ========================================================================== */
-
 (function () {
-  const PER_PAGE = 24; // files shown per page in the My Computer window (6 x 4)
+  const PER_PAGE = 24;
 
   const shuffle = (arr) => {
     const a = arr.slice();
@@ -32,13 +11,11 @@
   };
   const rnd = (list) => list[Math.floor(Math.random() * list.length)];
 
-  // ---- the phrase: 3 short words, new every game ----
   const WORD_POOL = ['kiwi', 'toast', 'pickle', 'waffle', 'noodle', 'mango', 'bagel', 'taco', 'llama',
     'donut', 'yeti', 'sock', 'tuna', 'pigeon', 'jelly', 'wobble', 'goose', 'melon', 'pizza', 'otter'];
   const WORDS = shuffle(WORD_POOL).slice(0, 3);
   const PHRASE_FILE = 'keyboard recovery phrase.txt';
 
-  // ---- the fake file system ----
   const D = (name, children) => ({ name, kind: 'dir', children: children || [] });
   const T = (name, text) => ({ name, kind: 'txt', text });
   const X = (name) => ({ name, kind: 'exe' });
@@ -111,7 +88,6 @@
     ]);
   }
 
-  // Deep folders the real file can end up in (one is picked each game):
   const HIDING_SPOTS = [
     ['Documents', 'Work', 'Meetings', '2003', 'March'],
     ['Users', 'You', 'AppData', 'Roaming', 'Clippy'],
@@ -138,7 +114,6 @@
 
   const ICONS = { dir: 'icon-folder.png', txt: 'file-doc.png', exe: 'file-exe.png', dll: 'file-exe.png', img: 'file-photo.png' };
 
-  // ---- My Computer: a file browser (folders first, PER_PAGE items per page) ----
   function openBrowser(G) {
     const win = G.openApp({
       id: 'stage7-my-computer', title: 'My Computer', icon: 'icon-my-computer.png',
@@ -148,7 +123,7 @@
     G.state.myComputerOpened = true;
 
     const disk = makeDisk();
-    let trail = [disk]; // folders from C: down to the current one
+    let trail = [disk];
     let page = 0;
 
     const top = G.make('div', 'fs-top');
@@ -213,8 +188,7 @@
     id: 7,
     name: 'Keyboard disconnected (recovery phrase)',
     vibe: 'annoyed',
-    textVars: { path: pathText(SPOT) }, // the hint names the folder
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "7"
+    textVars: { path: pathText(SPOT) },
     assets: ['keyboard-frame.png', 'key.png', 'key-pressed.png', 'tray-keyboard-off.png', 'icon-my-computer.png',
       'icon-folder.png', 'file-doc.png', 'file-exe.png', 'file-photo.png'],
 
@@ -223,7 +197,6 @@
       G.state.myComputerOpened = false;
       G.state.phraseFound = false;
 
-      // --- block the physical keyboard (and paste / IME / drag-text) everywhere ---
       const block = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -233,12 +206,10 @@
       G.on(document, 'beforeinput', block, true);
       G.on(document, 'paste', block, true);
       G.on(document, 'drop', block, true);
-      // tray-keyboard-off.png is a wide picture (500x200) -> a bigger, wide box
       G.tray.add('keyboard', 'Keyboard disconnected', null, {
         icon: 'tray-keyboard-off.png', iconW: 70, iconH: 28, text: 'Keyboard disconnected',
       });
 
-      // --- My Computer opens the file browser during this stage (instead of the empty window) ---
       const myComputer = document.getElementById('icon-my-computer');
       if (myComputer) {
         G.on(myComputer, 'click', (e) => {
@@ -248,8 +219,6 @@
         G.timeout(() => G.highlight(myComputer, 3000), 600);
       }
 
-      // --- on-screen keyboard: ALL letter keys reshuffle after every press ---
-      // alwaysOnTop: clicking the email must not hide the keyboard behind the mail window
       const win = G.openWindow({ title: 'On-Screen Keyboard (Recovered)', x: 120, y: 425, w: 720, h: 250, closable: false, alwaysOnTop: true });
       const panel = G.make('div', 'kbd-panel');
       G.setSkin(panel, 'keyboard-frame.png');
@@ -278,7 +247,6 @@
       keys.append(space, back);
     },
 
-    // 10 s idle and My Computer still not opened? Point at it.
     slowNudge(G) {
       return G.state.myComputerOpened ? null : G.line('openMyComputer');
     },

@@ -1,16 +1,3 @@
-/* =============================================================================
- *  STAGE 9 — WinRAWR license exceeded                            STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    A WinRAWR nag window: "Your 40-day free trial ended 2,847 days ago."
- *    "Buy license" runs away whenever the mouse gets within 80px. Click
- *    "Continue trial": the nag closes, then reopens once ("Are you sure?
- *    WinRAWR is sad. :(") — click "Continue trial" again to close it for good.
- *    Sending while the nag is open fails.  Pass: nag dismissed for good.
- *
- *  ASSETS: winrawr-logo.png
- * ========================================================================== */
-
 (function () {
   const FLEE_DISTANCE = 80;
   const W = 460;
@@ -52,7 +39,6 @@
     body.append(logo, text, buy, cont);
     win.body.appendChild(body);
 
-    // The Buy button runs away from the cursor.
     G.on(window, 'pointermove', (e) => {
       if (!buy.isConnected) return;
       const p = G.toGame(e);
@@ -77,7 +63,6 @@
     id: 9,
     name: 'WinRAWR',
     vibe: 'annoyed',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "9"
     assets: ['winrawr-logo.png'],
 
     setup(G) {

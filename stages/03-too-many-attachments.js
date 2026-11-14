@@ -1,23 +1,3 @@
-/* =============================================================================
- *  STAGE 3 — Too many attachments                                STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    The email now has 5 attachments; the max is 3. Drag attachment chips out
- *    of the email onto the Recycle Bin (bottom left of the desktop).
- *    - definitely_not_a_virus.exe MUST go.
- *    - cat.jpg can't be trashed: it bounces back ("Not the cat. Never the cat.").
- *    Pass: at most 3 attachments, the .exe is gone, cat.jpg is still attached.
- *
- *  STATE FLOW
- *    cat.jpg stays attached for stage 4 (compress), 6 (convert) and 8 (zip).
- *
- *    Optional: click the Recycle Bin to see what you threw away and EMPTY it
- *    (confirm popup; the bin goes back to trash-empty.png).
- *
- *  ASSETS: file-photo.png, file-doc.png, file-exe.png, trash-empty.png, trash-full.png
- *  SOUND:  sounds/empty-bin.wav (emptying the bin)
- * ========================================================================== */
-
 (function () {
   const EXE = 'definitely_not_a_virus.exe';
   const FILES = [
@@ -32,16 +12,13 @@
     id: 3,
     name: 'Too many attachments',
     vibe: 'happy',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "3"
     assets: ['file-photo.png', 'file-doc.png', 'file-exe.png', 'trash-empty.png', 'trash-full.png'],
 
     setup(G) {
-      // Always start from the same 5 files (also when jumped to directly).
       G.attachments.clear();
       FILES.forEach((f) => G.attachments.add(f[0], f[1], f[2]));
 
-      // Click the Recycle Bin: a window with what you threw away + "Empty Recycle Bin".
-      const trashed = []; // [{ name, size, icon }]
+      const trashed = [];
       let binWin = null;
       const bin = G.addIcon({
         id: 'trash', label: 'Recycle Bin', asset: 'trash-empty.png', x: 16, y: 470,
@@ -86,11 +63,11 @@
       }
 
       G.dragAttachments((att, point) => {
-        if (!G.hitTest(bin, point)) return; // dropped somewhere else: chip stays in the email
+        if (!G.hitTest(bin, point)) return;
         if (att.name === 'cat.jpg') {
           G.shake();
           G.clippy.say(G.line('notTheCat'), 'annoyed');
-          return; // the cat bounces back into the email
+          return;
         }
         trashed.push({ name: att.name, size: att.size, icon: att.icon });
         G.attachments.remove(att.name);

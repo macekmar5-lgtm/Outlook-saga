@@ -224,7 +224,7 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 | Clippy | `clippy.say(text, mood)`, `clippy.hide()`, `clippy.mood` |
 | Text | `line('key', vars)` (current stage's `lines`), `line('general.x.y', vars)` (any path); stage fields `textVars`, `lines` (fallbacks if clippy-lines.js has no entry) |
 | Clock | `clock.add(min)`, `clock.minutes`, `clock.minutesLeft`, `clock.start/stop/freeze/disableDeadline()` |
-| Stats | `Game.stats` = `{ bounces, rewrites, charsTyped, charsDeleted, startTime, endTime, hintsUsed }` for the whole run. rewrites = sends where To/Subject/body/attachments changed since the previous send; chars = real typing in subject/body (+ `ui.key` presses; text set from code doesn't count). Live in the statusbar (`#bounce-meter`: "Bounces: 7 · Rewrites: 5"). `Game.showStats()` = end screen on bluescreen-bg.png (stage 18 calls it after the blue screen), saves the best run (fewest bounces, then fastest) in localStorage `outlook-saga-best-run` — only full runs from the title screen |
+| Stats | `Game.stats` = `{ bounces, rewrites, charsTyped, charsDeleted, startTime, endTime, hintsUsed }` for the whole run. rewrites = sends where To/Subject/body/attachments changed since the previous send; chars = real typing in subject/body (+ `ui.key` presses; text set from code doesn't count). The live counter in the mail statusbar (`#bounce-meter`) reads "You bounced back 7 times" |
 | Run timer | `timer.ms / text / start() / stop() / format(ms)`, `timer.best`, `timer.saveBest()` (true = new record; only full runs from the title screen count). Real time, shown in the taskbar next to the clock; starts when Outlook opens, stops on delivered/fired |
 | Cleanup | `track(fn)`, `on(target, type, fn, opts)`, `timeout(fn, ms)`, `interval(fn, ms)` |
 | Misc | `state` {}, `stage`, `stages`, `stageIndex`, `over`, `bounces`, `layers.{icons,windows,highlight,popups,fx,overlay}`, `make(tag, cls, text)`, `CONFIG` |
@@ -234,7 +234,6 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 - Open `index.html` in Chrome. F12 console shows stage starts/passes and which art is missing.
 - `index.html?stage=7` — skip the title, start directly at stage 7.
   `&nodeadline=1` — 9:00 never fires you. `&freeze` — the clock doesn't move at all.
-- Console: `Game.debug.list()`, `Game.debug.skip()`, `Game.debug.goto(12)`, `Game.debug.missing()`,
-  `Game.debug.stats()` (end screen now).
+- Console: `Game.debug.list()`, `Game.debug.skip()`, `Game.debug.goto(12)`, `Game.debug.missing()`.
 - No test framework. Verify by playing: fail the stage once, fix it, pass it, and check the
   next stage doesn't inherit leftovers. README.md has a per-stage test checklist.

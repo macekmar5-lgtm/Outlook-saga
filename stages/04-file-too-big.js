@@ -1,30 +1,13 @@
-/* =============================================================================
- *  STAGE 4 — Attachment exceeds the file size limit              STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    cat.jpg is 4.2 GB. Click the cat.jpg chip in the email: a preview window
- *    opens with the cat (cat.png) under a hydraulic press (press.png). Grab the
- *    press and DRAG IT DOWN: the cat squishes live under it and the file size
- *    shrinks as you push. Push it all the way down -> the cat is flat, 3 MB.
- *    Let go too early and the press springs back up (the cat pops back).
- *    Pass: cat is compressed.
- *
- *  ASSETS: cat.png, press.png (the press head/plate, ~240x90), file-photo.png
- *  SOUND:  sounds/compressing.mp3 (plays when the cat is pressed flat)
- * ========================================================================== */
-
 (function () {
-  // ---- the press rig (game px; matches .press-rig in style.css) ----
-  const RIG_H = 300;                 // height of the whole rig
+  const RIG_H = 300;
   const CAT_W = 300;
-  const CAT_H = 180;                 // the cat stands on the floor at the bottom of the rig
+  const CAT_H = 180;
   const PRESS_W = 240;
-  const PRESS_H = 90;                // press.png is drawn this big; its BOTTOM edge squishes the cat
-  const FLAT = 0.12;                 // how flat the cat ends up (12% of his height)
-  const WIDEN = 0.17;                // ...and how much wider he gets (at FLAT he's 117% wide)
-  const PRESS_LOWEST = RIG_H - CAT_H * FLAT - PRESS_H; // the press can't go lower than this
+  const PRESS_H = 90;
+  const FLAT = 0.12;
+  const WIDEN = 0.17;
+  const PRESS_LOWEST = RIG_H - CAT_H * FLAT - PRESS_H;
 
-  /** 4.2 GB at full height -> 3 MB when flat (a nice dramatic curve in between). */
   function sizeFor(scale) {
     const k = (scale - FLAT) / (1 - FLAT);
     const mb = 3 * Math.pow(4300 / 3, Math.max(0, k));
@@ -48,7 +31,7 @@
     col.append(rig, size, note);
     win.body.appendChild(col);
 
-    let top = 0; // where the press is (0 = all the way up)
+    let top = 0;
     const squish = (pressTop) => {
       const s = Math.min(1, Math.max(FLAT, (RIG_H - (pressTop + PRESS_H)) / CAT_H));
       cat.style.transform = `scale(${1 + (1 - s) * (WIDEN / (1 - FLAT))}, ${s})`;
@@ -65,7 +48,6 @@
     };
 
     if (G.state.catCompressed) {
-      // reopened later: the cat stays flat, the press is parked up top
       cat.style.transform = `scale(${1 + WIDEN}, ${FLAT})`;
       size.textContent = 'cat.jpg - 3 MB';
       note.textContent = 'Compressed. He is fine. Probably.';
@@ -75,7 +57,6 @@
       note.textContent = 'Limit: 25 MB. Drag the press down!';
     }
 
-    // ---- drag the press (up/down only) ----
     let startY = 0;
     let startTop = 0;
     const onMove = (e) => {
@@ -86,7 +67,6 @@
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       if (top >= PRESS_LOWEST - 3) {
-        // fully pressed: flat cat, 3 MB, press lifts off
         G.state.catCompressed = true;
         G.attachments.setSize('cat.jpg', '3 MB');
         G.sound('compressing.mp3');
@@ -98,7 +78,6 @@
         size.textContent = 'cat.jpg - 3 MB';
         note.textContent = 'Compressed. He is fine. Probably.';
       } else if (top > 0) {
-        // let go too early: the hydraulics push it back up, the cat pops back
         movePress(0, 350);
         G.clippy.say(G.line('pressHarder'), 'happy');
       }
@@ -121,7 +100,6 @@
     id: 4,
     name: 'File too big (hydraulic press)',
     vibe: 'happy',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "4"
     assets: ['cat.png', 'press.png', 'file-photo.png'],
 
     setup(G) {

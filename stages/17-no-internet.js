@@ -1,24 +1,10 @@
-/* =============================================================================
- *  STAGE 17 — No internet connection                             STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    The tray wifi shows disconnected (tray-wifi-off.png) and the mail status
- *    bar says so. A network cable lies on the desktop, partly under the mail
- *    window; the wall socket is at the bottom left. Drag the cable onto the
- *    socket -> the tray shows connected again.  Pass: cable plugged in.
- *
- *  ASSETS: network-cable.png, wall-socket.png, tray-wifi-off.png, tray-wifi.png
- * ========================================================================== */
-
 (function () {
-  // Extra px around the socket that still counts as "plugged in" (generous on purpose).
   const SOCKET_HIT_PAD = 70;
 
   Game.registerStage({
     id: 17,
     name: 'No internet',
     vibe: 'panic',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "17"
     assets: ['network-cable.png', 'wall-socket.png', 'tray-wifi-off.png', 'tray-wifi.png'],
 
     setup(G) {

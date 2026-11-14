@@ -1,44 +1,13 @@
-/* =============================================================================
- *  STAGE 16 — Confirm you are human (bus captcha)                STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    Classic captcha: "Select all squares with buses. If there are none, click
- *    skip." One street photo (captcha-bus.png) is cut into a 4x4 grid.
- *    - Every square in BUS_SQUARES must be selected.
- *    - Squares in EDGE_SQUARES (bits of the bus roof/sign) may be selected or not.
- *    - Any other square selected = wrong ("Please select all matching images.").
- *    - Skip = wrong ("There are literally three buses.").
- *    Pass: verified (the first correct Verify passes).
- *
- *  ART / TUNING
- *    captcha-bus.png is shown at 400x400 and cut into 16 squares of 100x100:
- *          0  1  2  3
- *          4  5  6  7
- *          8  9 10 11
- *         12 13 14 15
- *    When the real picture exists, set BUS_SQUARES / EDGE_SQUARES below to match
- *    where the bus actually is. The gaps between squares show captcha-frame.png
- *    behind them (that's the white grid lines — nothing is drawn in CSS).
- *
- *  ASSETS: captcha-bus.png (800x800 file shown at 400x400; public-domain stock photo,
- *          see CREDITS.md), captcha-header.png (the blue header, ~400x90),
- *          captcha-frame.png (panel behind the grid), checkbox-checked.png (tick on
- *          selected squares)
- * ========================================================================== */
-
 (function () {
-  const GRID = 4;               // 4x4 squares
-  const SIZE = 100;             // one square in game px (picture = GRID * SIZE)
-  // Matches captcha-bus.png (London, Oxford Street — see CREDITS.md):
-  // three double-deckers across the middle; the black cabs below are decoys.
-  const BUS_SQUARES = [5, 6, 7, 9, 10, 11]; // must be selected
-  const EDGE_SQUARES = [];                  // may be selected or not (none for this photo)
+  const GRID = 4;
+  const SIZE = 100;
+  const BUS_SQUARES = [5, 6, 7, 9, 10, 11];
+  const EDGE_SQUARES = [];
 
   Game.registerStage({
     id: 16,
     name: 'Captcha',
     vibe: 'panic',
-    // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "16"
     assets: ['captcha-bus.png', 'captcha-header.png', 'captcha-frame.png', 'checkbox-checked.png'],
 
     setup(G) {
@@ -60,9 +29,8 @@
       const cells = [];
       for (let i = 0; i < GRID * GRID; i++) {
         const cell = G.make('div', 'captcha-cell clickable');
-        cell.dataset.n = i; // shown on the placeholder squares until captcha-bus.png exists
+        cell.dataset.n = i;
         const crop = G.make('div', 'captcha-crop');
-        // The whole picture, shifted so only this square's part is visible.
         const pic = G.asset('captcha-bus.png', { w: GRID * SIZE, h: GRID * SIZE, className: 'captcha-pic' });
         pic.style.left = -(i % GRID) * SIZE + 'px';
         pic.style.top = -Math.floor(i / GRID) * SIZE + 'px';

@@ -1,40 +1,22 @@
-/* =============================================================================
- *  STAGE 2 — Subject line is in ALL CAPS                         STATUS: DONE
- *  -----------------------------------------------------------------------------
- *  WHAT THE PLAYER MUST DO
- *    Caps Lock is "stuck": the subject they typed in stage 1 is now SHOUTING
- *    and anything they type comes out uppercase. They must find the CAPS item
- *    in the taskbar tray (bottom right, next to the clock), click it to turn
- *    Caps Lock off, then retype the subject so it has lowercase letters.
- *
- *  ASSETS
- *    tray-caps.png (off), tray-caps-on.png (ON) — 20x20 tray icons,
- *    listed with the OS art at the top of style.css.
- * ========================================================================== */
-
 Game.registerStage({
   id: 2,
   name: 'Caps Lock stuck',
   vibe: 'happy',
-  // Texts (error, Clippy, hint, retry, lines): clippy-lines.js -> "stages" -> "2"
   assets: ['tray-caps.png', 'tray-caps-on.png'],
 
   setup(G) {
     const subject = G.mail.el.subject;
     G.state.capsLock = true;
 
-    // While Caps Lock is on, everything in the subject is forced to uppercase.
     const forceCaps = () => {
       if (!G.state.capsLock) return;
       const cursor = subject.selectionStart;
       subject.value = subject.value.toUpperCase();
       subject.setSelectionRange(cursor, cursor);
     };
-    forceCaps(); // the subject from stage 1 is now SHOUTING
+    forceCaps();
     G.on(subject, 'input', forceCaps);
 
-    // The tray toggle (removed automatically when the stage ends).
-    // Shows tray-caps-on.png while ON and tray-caps.png while off.
     const showState = () => {
       G.tray.setIcon('caps', G.state.capsLock ? 'tray-caps-on.png' : 'tray-caps.png');
       G.tray.get('caps').title = 'Caps Lock: ' + (G.state.capsLock ? 'ON' : 'off');
