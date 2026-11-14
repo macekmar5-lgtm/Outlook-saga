@@ -208,7 +208,7 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 | Apps | `openApp({id, ...openWindow options})` — one window per `id`; `.created` is true only the first time |
 | Desktop | `addIcon({id, label, asset, x, y, onClick, onDoubleClick, persist})` → el (`#icon-<id>`, `.setLabel(t)`), `removeIcon(id)`, `addProp({id, asset, x, y, w, h, layer})` → el (`#prop-<id>`) |
 | Tray | `tray.add(id, label, onClick, {icon, text, title, persist})` (icon defaults to `tray-<id>.png`), `tray.setIcon(id, file)`, `tray.setText(id, text)`, `tray.get(id)`, `tray.remove(id)`. Built-in: `wifi`, `volume`, `battery` |
-| Drag | `dragGhost(el, {onDrop(point, el), onStart, canDrag, persist})` — drags a copy on the top layer (visible above windows); `makeDraggable(el, {onDrop, revert, …})` moves the element itself (stays in its layer); `hitTest(el, point)`; `overlaps(a, b, minPx)` |
+| Drag | `dragGhost(el, {onDrop(point, el), onStart, canDrag, persist})` — drags a copy on the top layer (visible above windows); `makeDraggable(el, {onDrop, revert, …})` moves the element itself (stays in its layer); `hitTest(el, point, pad)` (pad = extra px of hitbox around the target); `overlaps(a, b, minPx)` |
 | Coords | `toGame(event)` or `toGame(clientX, clientY)` → game px; `rectOf(el)` → `{x, y, w, h}` in game px |
 | Juice | `highlight(selOrEl, ms)` (pulsing highlight-frame.png; 0 = until stage end) → off(); `shake()`; `blackout(text, ms)` → Promise (black screen + text) |
 | Flow | `restartStage()` (cleanup + setup again, no popup), `send()`, `restart()` |

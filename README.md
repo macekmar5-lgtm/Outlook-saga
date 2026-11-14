@@ -42,7 +42,7 @@ Open each link (from the project folder), fail the stage once by pressing SUBMIT
 | 1 | `index.html?stage=1&nodeadline=1` | Type anything in **Subject**, press SUBMIT. |
 | 2 | `index.html?stage=2&nodeadline=1` | Subject is forced to CAPS. Click the **Caps Lock icon** in the tray (bottom right), retype the subject with lowercase letters. |
 | 3 | `index.html?stage=3&nodeadline=1` | Drag `definitely_not_a_virus.exe` + one more chip onto the **Recycle Bin** (bottom left). Dragging `cat.jpg` there bounces back ("Not the cat"). Max 3 left. |
-| 4 | `index.html?stage=4&nodeadline=1` | Click the **cat.jpg** chip → preview → **Compress** → the cat photo gets squished flat while the bar runs → 3 MB. |
+| 4 | `index.html?stage=4&nodeadline=1` | Click the **cat.jpg** chip → preview → **drag the hydraulic press down** onto the cat (size shrinks live). Let go halfway once: it springs back. Push all the way down → flat cat, 3 MB. |
 | 5 | `index.html?stage=5&nodeadline=1` | Body is ~1400 chars, counter red. Delete text until it's 20–500 characters. |
 | 6 | `index.html?stage=6&nodeadline=1` | **Double-click** "Convertinator 3000" (top right) → drag the **cat.jpg** chip into the drop zone → wait → it becomes cat.png. |
 | 7 | `index.html?stage=7&nodeadline=1` | Real keyboard does nothing. Click 3+ keys on the **on-screen keyboard** (keys swap every 5 presses). |
@@ -51,7 +51,7 @@ Open each link (from the project folder), fail the stage once by pressing SUBMIT
 | 10 | `index.html?stage=10&nodeadline=1` | Click every red **sorry** in the body; every 3rd becomes **apologies**: click those too. |
 | 11 | `index.html?stage=11&nodeadline=1` | Scribble a decent signature on the pad (a dot is rejected) → **Submit signature**. |
 | 12 | `index.html?stage=12&nodeadline=1` | Click the 6 red shouty words (WHY, ALWAYS, !!!, UNACCEPTABLE, SERIOUSLY, HATE) until the meter shows 15%. |
-| 13 | `index.html?stage=13&nodeadline=1` | Within 20 s (shown in the tray) drag the **charger plug** (peeking out under the left edge of the mail window) onto the **laptop port** (right edge). Stray clicks cost 1 s. Let it hit 0 once: "Laptop died.", -2 min, restart. |
+| 13 | `index.html?stage=13&nodeadline=1` | Close the popup: the view zooms OUT of the screen to the real laptop on a desk (the game keeps running inside it). Within 20 s drag the **charger** on the desk into the **port** on the right side of the laptop. Stray clicks cost 1 s. It zooms back in, then press SUBMIT. Let it hit 0 once: "Laptop died.", -2 min, restart. |
 | 14 | `index.html?stage=14&nodeadline=1` | Click **Webcam** (top right) → **Background effects** → **Office**. (Blur fails: "Still a bed.") |
 | 15 | `index.html?stage=15&nodeadline=1` | Type a username and press **Create** repeatedly; each try reveals a rule. `Bounce8kiwiMayprinter` passes all 7. From changes to your username. |
 | 16 | `index.html?stage=16&nodeadline=1` | Bus captcha (London street, 4×4 squares). Select the 6 squares with the red buses (the 3 middle-row squares on the right + the 3 below them; NOT the black cabs) → **Verify**. Skip or wrong squares fail. |
@@ -170,14 +170,14 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 
 ### Stages
 - 3: [x] `file-photo.png`, [x] `file-doc.png`, [x] `file-exe.png` (20×20), [x] `trash-empty.png`, [x] `trash-full.png` (48×48)
-- 4: [x] `cat.png` (~300×220; the game squishes this same picture with an animation. `cat-squished.png` is no longer used)
+- 4: [x] `cat.png` (~300×180; squished live by the press), [ ] `press.png` (hydraulic press head/plate, ~240×90; its BOTTOM edge touches the cat)
 - 6: [ ] `icon-converter.png` (48×48), [ ] `drop-zone.png` (9-slice, ~300×110)
 - 7: `keyboard-frame.png`, `key.png`, `key-pressed.png`, `tray-keyboard-off.png` (above)
 - 8: [ ] `icon-zip.png` (48×48)
 - 9: [ ] `winrawr-logo.png` (100×100)
 - 11: [ ] `signature-pad.png` (480×200)
 - 12: [ ] `mood-meter.png` (200×110 dial), [ ] `mood-needle.png` (10×90, pointing UP, pivot at the bottom centre)
-- 13: [ ] `charger-plug.png` (90×60), [ ] `laptop-port.png` (70×50)
+- 13 (zoom-out to the real world): [x] `desk-background.png` (the desk/room), [x] `laptop.png` (the laptop with its **screen area transparent**; the live game shows through it), [x] `charger.png` (plug + cable, prongs at the TOP; when plugged in it turns 90° left so the prongs go into the port), [x] `laptop-port.png` (the socket). Positions/sizes are constants at the top of `stages/13-battery.js` (HOLE, LAPTOP, PORT, CHARGER, CHARGER_FACE): adjust them to the drawings.
 - 14: [ ] `icon-webcam.png` (48×48), [ ] `webcam-bed.png`, [ ] `webcam-office.png` (420×280)
 - 16: [x] `captcha-bus.png` (public-domain stock photo, see CREDITS.md; 800×800 shown at 400×400, cut into 4×4 squares. If you replace it, update `BUS_SQUARES` / `EDGE_SQUARES` at the top of `stages/16-captcha.js`), [ ] `captcha-header.png` (the blue "Select all squares with buses" header, ~412×90), [ ] `captcha-frame.png` (panel behind the grid; shows through the gaps as the grid lines), `checkbox-checked.png` (tick on selected squares)
 - No longer used: `boss-1.png` … `boss-9.png` (the old printer captcha). The uploaded ones can be deleted or reused.
@@ -187,6 +187,8 @@ All tunable numbers (start time, deadline, minutes per send/hint, clock speed) a
 ### Sounds (`assets/sounds/`)
 - [ ] `send.wav`, [ ] `bounce.wav` (must be in `assets/sounds/`), [x] `error.wav`, [x] `bluescreen.wav`
 - [x] `winxp.wav`: plays when the loading screen ends and the desktop appears
+- [x] `button.wav`: plays on every button and desktop-icon press (dialogs, toolbar, keys, title bar, Start, SUBMIT, icons)
+- [x] `fan.wav`: PC fan, loops the whole game; loud when you press Start, then fades to a quiet hum (`FAN_*` in CONFIG)
 - Clippy has **no** sound (on purpose), so `clippy.wav` isn't used.
 
 ---

@@ -98,15 +98,16 @@ Game.lines = {
 
     "4": {
       "error": "Attachments exceed the file size limit (25 MB). cat.jpg is 4.2 GB.",
-      "clippy": "Oh! The printer only has 25 MB of memory. Click the cat.jpg attachment and compress him. Gently, he is very soft.",
-      "hint": "Click the cat.jpg chip in the email to open it, then press \"Compress\".",
+      "clippy": "Oh! The printer only has 25 MB of memory. Click the cat.jpg attachment and compress him. With a hydraulic press. Gently, he is very soft.",
+      "hint": "Click the cat.jpg chip in the email to open it, then drag the hydraulic press DOWN onto the cat, all the way.",
       "retry": [
         "The cat is still 4.2 GB. That is a LOT of cat.",
-        "Click the cat. Press Compress. I believe in you! :)"
+        "Click the cat. Grab the press. Push it all the way down. I believe in you! :)"
       ],
       "lines": {
         "alreadyFlat": "He's already flat. Any more and he's a pancake.",
-        "compressed": "There. Slightly flatter, fully legal. 3 MB of cat."
+        "compressed": "There. Slightly flatter, fully legal. 3 MB of cat.",
+        "pressHarder": "ALL the way down! He's a very sturdy cat. The hydraulics pushed back."
       }
     },
 
@@ -219,15 +220,15 @@ Game.lines = {
 
     "13": {
       "error": "Battery at 3%. Plug in your laptop.",
-      "clippy": "BATTERY. THREE. PERCENT. The charger is on the desktop, UNDER the email. The port is on the RIGHT. STOP CLICKING THINGS, EVERY CLICK COSTS US A SECOND.",
-      "hint": "The charger plug peeks out from under the left edge of the mail window. Drag it onto the laptop port at the right edge of the screen.",
+      "clippy": "BATTERY. THREE. PERCENT. I can't fix this from in here. You have to do it OUT THERE. In the real world. With your REAL HANDS. STOP CLICKING THINGS, EVERY CLICK COSTS US A SECOND.",
+      "hint": "Close the popup: the view zooms out to your actual laptop. Drag the charger lying on the desk into the port on the right side of the laptop.",
       "retry": [
         "WE ARE STILL ON BATTERY. I CAN SEE THE LIGHT.",
         "PLUG. INTO. PORT. I am begging you."
       ],
       "lines": {
         "charging": "IT'S CHARGING. I CAN FEEL MY PIXELS AGAIN. Send the email. SEND IT.",
-        "wrongSpot": "THAT IS NOT THE PORT. THE PORT IS ON THE RIGHT.",
+        "wrongSpot": "THAT IS NOT THE PORT. THE PORT IS ON THE SIDE OF THE LAPTOP.",
         "revived": "WE ARE BACK. That cost {minutes} minutes. 20 seconds. AGAIN. Plug. It. In."
       }
     },

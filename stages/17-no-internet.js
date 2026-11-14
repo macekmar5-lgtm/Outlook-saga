@@ -11,6 +11,9 @@
  * ========================================================================== */
 
 (function () {
+  // Extra px around the socket that still counts as "plugged in" (generous on purpose).
+  const SOCKET_HIT_PAD = 70;
+
   Game.registerStage({
     id: 17,
     name: 'No internet',
@@ -31,7 +34,7 @@
       G.dragGhost(cable, {
         canDrag: () => !G.state.online,
         onDrop(point) {
-          if (!G.hitTest(socket, point)) {
+          if (!G.hitTest(socket, point, SOCKET_HIT_PAD)) {
             G.clippy.say(G.line('wrongSpot'), 'panic');
             return;
           }

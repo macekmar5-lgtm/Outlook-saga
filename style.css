@@ -111,6 +111,7 @@
   --clickable-word-text: #c00000;
   --rule-fail-text: #c00000;   /* stage 15 password rules */
   --rule-pass-text: #007a00;
+  --world-text: #fff;          /* stage 13 battery readout on the desk art */
 
   /* ---- cursor hotspots: "x y" in pixels inside the cursor image ---- */
   --hotspot-cursor: 2 2;          /* tip of the arrow in cursor.png */
@@ -651,18 +652,12 @@ canvas { display: block; }
 .stage-msg { min-height: 18px; font-weight: bold; }
 .stage-note { font-size: 12px; opacity: 0.8; }
 
-/* stage 4: the cat photo gets squished (motion on our own art: scale, no drawing).
-   Squish anchors at the bottom so he's pressed onto the floor. 2.2s = SQUISH_MS in the stage. */
-.cat-stage { width: 300px; height: 220px; display: flex; align-items: flex-end; justify-content: center; }
-.cat-stage .asset { transform-origin: 50% 100%; }
-/* One smooth squish straight down (no bounce). Change the end value in both places
-   below to make him flatter/wider: scale(width, height). */
-.cat-squishing { animation: cat-squish 2.2s ease-in-out forwards; }
-.cat-squished { transform: scale(1.15, 0.12); }
-@keyframes cat-squish {
-  from { transform: scale(1, 1); }
-  to   { transform: scale(1.15, 0.12); }
-}
+/* stage 4: the player drags a hydraulic press (press.png) down onto the cat photo, which
+   squishes live (motion on our own art: scale, no drawing). Sizes/limits are in the stage file. */
+.press-rig { position: relative; width: 300px; height: 300px; }
+.press-rig .press-cat { position: absolute; left: 0; bottom: 0; transform-origin: 50% 100%; }
+.press-rig .press-head { position: absolute; left: 30px; top: 0; touch-action: none; }
+.press-rig .press-head.locked { cursor: default; }
 
 /* stage 6: Convertinator drop zone (drop-zone.png) */
 .drop-zone { height: 110px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; }
@@ -689,8 +684,27 @@ canvas { display: block; }
 .mood-needle { position: absolute; left: 95px; bottom: 0; transform-origin: 50% 100%; transition: transform 0.4s ease-out; }
 .mood-label { font-size: 18px; font-weight: bold; text-align: center; }
 
-/* stage 13: battery */
-.battery-big { font-size: 28px; font-weight: bold; text-align: center; }
+/* stage 13: the camera zooms out of the screen into the "real world" (desk + laptop).
+   .world-back sits behind #screen, .world-front in front of it; both only show while zoomed out. */
+.world { position: absolute; inset: 0; display: none; transform-origin: 0 0; }
+#game.zoomed-out .world { display: block; }
+.world-front, .world-hud { pointer-events: none; }
+.world-front > .world-plug { pointer-events: auto; }
+.world-bg, .world-laptop, .world-plug, .world-port { position: absolute; }
+/* plugged in: the charger turns 90 degrees left so its prongs point into the port */
+.world-plug.plugged-in { rotate: -90deg; transition: rotate 0.25s ease-out, left 0.25s ease-out, top 0.25s ease-out; }
+.world-bg { left: 0; top: 0; }
+/* the laptop placeholder must stay see-through, or it would hide the game in the screen hole */
+.world-laptop.asset-missing { background-color: transparent; }
+.world-text {
+  position: absolute; left: 0; right: 0; top: 24px;
+  text-align: center; white-space: pre-line;
+  font: bold 30px Tahoma, sans-serif; color: var(--text);
+}
+#game.skin-desk-background .world-text { color: var(--world-text); }
+/* the readout fades in once the camera has pulled back a bit */
+.world-hud .world-text { animation: hud-in 0.5s ease-out 0.9s both; }
+@keyframes hud-in { from { opacity: 0; transform: translateY(-10px); } }
 
 /* stage 14: webcam */
 .webcam-preview { transition: filter 0.3s; }

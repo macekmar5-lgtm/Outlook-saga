@@ -67,6 +67,11 @@ const CONFIG = {
   ERROR_SOUND_LEAD_MS: 900,      // start error.wav this long BEFORE the "Mail Delivery Failed" popup appears
   DELIVER_MS: 900,               // envelope flies out and never returns (final stage)
   LOADING_MS: 3000,              // loading screen after Start; then sounds/winxp.wav plays
+
+  // ---- Background PC fan (sounds/fan.wav, loops the whole game) ----
+  FAN_START_VOLUME: 1.0,         // 0..1 — loud when you press Start (PC spinning up)
+  FAN_GAME_VOLUME: 0.08,         // 0..1 — quiet level it settles at for the rest of the game
+  FAN_FADE_MS: 8000,             // how long it takes to go from loud to quiet
 };
 
 /* =============================================================================
@@ -221,11 +226,13 @@ window.Game = Game;
   };
 
   /** True if a game-coordinate point ({x, y}, e.g. from a drop) is inside the element. */
-  Game.hitTest = function (target, point) {
+  Game.hitTest = function (target, point, pad) {
+    // pad (optional, game px): make the target's hitbox bigger on every side
     const el = resolveEl(target);
     if (!el || !el.isConnected || !point) return false;
     const r = Game.rectOf(el);
-    return point.x >= r.x && point.x <= r.x + r.w && point.y >= r.y && point.y <= r.y + r.h;
+    const p = pad || 0;
+    return point.x >= r.x - p && point.x <= r.x + r.w + p && point.y >= r.y - p && point.y <= r.y + r.h + p;
   };
 
   /* ===========================================================================
@@ -678,7 +685,9 @@ window.Game = Game;
 
   /** Bring a window element above the other windows. */
   Game.bringToFront = function (win) {
-    resolveEl(win).style.zIndex = ++zTop;
+    win = resolveEl(win);
+    // "Always on top" windows live in a higher band, so normal windows can't cover them.
+    win.style.zIndex = (win.dataset.onTop ? 100000 : 0) + ++zTop;
   };
 
   /**
@@ -730,6 +739,7 @@ window.Game = Game;
    *   skin:  frame art, default 'window-frame.png'
    *   onClose(win): runs whenever the window closes (also at stage end!)
    *   persist: true = don't auto-close when the stage ends
+   *   alwaysOnTop: true = stays above every normal window (e.g. clicking the mail window won't hide it)
    * Returns { el, body, close(), setTitle(text) }.
    */
   Game.openWindow = function (opts) {
@@ -738,6 +748,7 @@ window.Game = Game;
     const h = opts.h || 300;
     const win = make('div', 'xp-window' + (opts.className ? ' ' + opts.className : ''));
     Game.setSkin(win, opts.skin || 'window-frame.png');
+    if (opts.alwaysOnTop) win.dataset.onTop = '1';
     win.style.width = w + 'px';
     win.style.height = h + 'px';
     win.style.left = (opts.x != null ? opts.x : Math.round((CONFIG.WIDTH - w) / 2)) + 'px';
@@ -1727,6 +1738,31 @@ window.Game = Game;
   let loading = false;
 
   /**
+   * Background PC fan: sounds/fan.wav loops for the whole game. Starts loud
+   * (CONFIG.FAN_START_VOLUME) and fades down to CONFIG.FAN_GAME_VOLUME over
+   * CONFIG.FAN_FADE_MS. Missing file = silent, as always.
+   */
+  let fan = null;
+  function startFan(quiet) {
+    if (fan) return;
+    fan = new Audio(CONFIG.SOUND_PATH + 'fan.wav');
+    fan.loop = true;
+    const vol = (v) => clamp(v * CONFIG.MASTER_VOLUME, 0, 1);
+    const from = quiet ? CONFIG.FAN_GAME_VOLUME : CONFIG.FAN_START_VOLUME;
+    fan.volume = vol(from);
+    const p = fan.play();
+    if (p && p.catch) p.catch(() => {});
+    const t0 = performance.now();
+    const fade = (now) => {
+      const k = clamp((now - t0) / CONFIG.FAN_FADE_MS, 0, 1);
+      fan.volume = vol(from + (CONFIG.FAN_GAME_VOLUME - from) * k);
+      if (k < 1) requestAnimationFrame(fade);
+    };
+    requestAnimationFrame(fade);
+  }
+  Game.fan = { get audio() { return fan; } };
+
+  /**
    * Start button: title -> loading screen (CONFIG.LOADING_MS, a filling bar) ->
    * desktop + winxp.wav + Clippy's greeting. The clock only starts after loading.
    * quiet = true (debug jumps like ?stage=N) skips the loading screen and the sound.
@@ -1734,6 +1770,7 @@ window.Game = Game;
   function startGame(quiet) {
     if (Game.started) return;
     $('#title-screen').classList.add('hidden');
+    startFan(quiet); // loud on Start, then settles to a quiet hum
     if (quiet) {
       beginPlay(true);
       return;
@@ -1814,6 +1851,13 @@ window.Game = Game;
 
     // Static art declared in index.html with data-asset="file.png"
     document.querySelectorAll('[data-asset]').forEach((box) => Game.setAsset(box, box.dataset.asset));
+
+    // ---- every button / desktop icon press plays button.wav (disabled buttons stay silent) ----
+    document.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const btn = e.target.closest && e.target.closest('button, .desktop-icon');
+      if (btn && !btn.disabled && root.contains(btn)) Game.sound('button.wav');
+    }, true);
 
     // ---- mail window ----
     const m = Game.mail.el;

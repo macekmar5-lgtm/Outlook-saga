@@ -48,7 +48,8 @@
       });
 
       // --- on-screen keyboard ---
-      const win = G.openWindow({ title: 'On-Screen Keyboard (Recovered)', x: 250, y: 300, w: 720, h: 250, closable: false });
+      // alwaysOnTop: clicking the email must not hide the keyboard behind the mail window
+      const win = G.openWindow({ title: 'On-Screen Keyboard (Recovered)', x: 250, y: 300, w: 720, h: 250, closable: false, alwaysOnTop: true });
       const panel = G.make('div', 'kbd-panel');
       G.setSkin(panel, 'keyboard-frame.png');
       const keys = G.make('div', 'kbd-keys');
