@@ -206,6 +206,7 @@ Extensions".)
 - [ ] `bluescreen.wav`: the final crash
 - [ ] `trash.wav`: stage 3, a file lands in the Recycle Bin
 - [ ] `squish.wav`: stage 4, the cat gets compressed
+- [ ] `plug.wav`: stages 13 + 17, a plug goes into its socket
 
 ---
 
