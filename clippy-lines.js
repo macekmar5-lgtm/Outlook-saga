@@ -299,6 +299,8 @@ Game.lines = {
         "Rounds. Finish. The. Rounds."
       ],
       "lines": {
+        "clippyShort": "The server just wants to make sure you are human. Three quick rounds. The short version. You are welcome.",
+        "hintShort": "Beat all 3 rounds in the \"Are you human?\" window: pictures, the light pattern, and the rotation. A wrong answer only restarts that round (but it counts as a bounce).",
         "round1": "You ticked a box. Very human. Wait, there is more?",
         "round2": "The tiny bus counted too. Nobody ever believes me about the tiny bus.",
         "round3": "You spelled it wrong on purpose. Correctly wrong. Beautiful.",

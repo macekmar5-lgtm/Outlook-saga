@@ -1,6 +1,8 @@
 (function () {
   const CAPTCHA_CONFIG = {
     rounds: 10,
+    // "Shortened Captcha" mode (title screen, Game.mode === 'short'): only these rounds, in this order.
+    shortRounds: [2, 4, 6], // 2 = picture grid, 4 = pattern (Simon), 6 = rotate
     useRealRecaptcha: true,
     // Google's public TEST key (always passes, shows a "testing only" note). Replace it with our own
     // reCAPTCHA v2 key, registered for the domains itch.zone, localhost and 127.0.0.1.
@@ -539,9 +541,17 @@
     },
   ];
 
+  // Round numbers (1-based, into ROUNDS) played in the current mode.
+  function roundOrder() {
+    if (Game.mode === 'short') return CFG.shortRounds.filter((n) => ROUNDS[n - 1]);
+    return ROUNDS.slice(0, CFG.rounds).map((_, i) => i + 1);
+  }
+
   function startGauntlet(G) {
     const params = new URLSearchParams(location.search);
-    const firstRound = Math.min(CFG.rounds, Math.max(1, parseInt(params.get('captcharound'), 10) || 1));
+    const order = roundOrder();
+    const total = order.length;
+    const firstRound = Math.min(total, Math.max(1, parseInt(params.get('captcharound'), 10) || 1));
     const useGoogle = CFG.useRealRecaptcha && /^https?:$/.test(location.protocol) && params.get('norecaptcha') !== '1';
     if (useGoogle) loadRecaptcha();
 
@@ -641,8 +651,8 @@
       content.classList.remove('cap-locked');
       busy = false;
       G.state.captchaRound = index + 1;
-      roundLabel.textContent = `Round ${index + 1}/${CFG.rounds}`;
-      round = makeRound(ROUNDS[index]);
+      roundLabel.textContent = `Round ${index + 1}/${total}`;
+      round = makeRound(ROUNDS[order[index] - 1]);
       try {
         round.render(content);
       } catch (e) {
@@ -689,8 +699,8 @@
         content.classList.add('cap-locked');
         submit.disabled = true;
         msg.textContent = round.passText() || 'Verified.';
-        G.clippy.say(G.line('round' + (index + 1)), ROUND_MOODS[index] || 'panic');
-        if (index + 1 >= CFG.rounds) {
+        G.clippy.say(G.line('round' + order[index]), ROUND_MOODS[order[index] - 1] || 'panic');
+        if (index + 1 >= total) {
           G.timeout(finish, CFG.nextRoundMs);
           return;
         }
@@ -729,11 +739,16 @@
     setup(G) {
       G.state.captcha = false;
       G.state.captchaRound = 1;
+      if (G.mode === 'short') {
+        // The engine reads these right after setup() / on Clippy clicks.
+        G.stage.clippy = G.line('clippyShort');
+        G.stage.hint = G.line('hintShort');
+      }
       startGauntlet(G);
     },
 
     check(G) {
-      return G.state.captcha || `Captcha not finished (round ${G.state.captchaRound || 1}/${CFG.rounds}). Are you even human?`;
+      return G.state.captcha || `Captcha not finished (round ${G.state.captchaRound || 1}/${roundOrder().length}). Are you even human?`;
     },
 
     cleanup(G) {

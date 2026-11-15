@@ -1212,7 +1212,10 @@ window.Game = Game;
     },
   };
 
-  const BEST_KEY = 'outlook-saga-best-ms';
+  // 'normal' or 'short' (title screen "Shortened Captcha" button, or ?mode=short). Only the captcha
+  // stage reads it. Each mode keeps its own best time.
+  Game.mode = 'normal';
+  const bestKey = () => 'outlook-saga-best-ms' + (Game.mode === 'short' ? '-short' : '');
   let runStart = 0;
   let runEnd = 0;
   let runTimerTick = null;
@@ -1244,14 +1247,14 @@ window.Game = Game;
       return `${m}:${s}.${tenths % 10}`;
     },
     get best() {
-      try { const v = Number(localStorage.getItem(BEST_KEY)); return v > 0 ? v : null; } catch (e) { return null; }
+      try { const v = Number(localStorage.getItem(bestKey())); return v > 0 ? v : null; } catch (e) { return null; }
     },
     get fullRun() { return fullRun; },
     saveBest() {
       if (!fullRun) return false;
       const best = Game.timer.best;
       if (best && best <= Game.timer.ms) return false;
-      try { localStorage.setItem(BEST_KEY, String(Math.round(Game.timer.ms))); } catch (e) {  }
+      try { localStorage.setItem(bestKey(), String(Math.round(Game.timer.ms))); } catch (e) {  }
       return true;
     },
   };
@@ -1817,8 +1820,10 @@ window.Game = Game;
     clippyImg.addEventListener('click', onClippyClick);
     bubble.addEventListener('click', () => Game.clippy.hide());
 
-    $('#start-game').addEventListener('click', () => startGame());
+    $('#start-game').addEventListener('click', () => { Game.mode = 'normal'; startGame(); });
+    $('#start-short').addEventListener('click', () => { Game.mode = 'short'; startGame(); });
     const params = new URLSearchParams(location.search);
+    if (params.get('mode') === 'short') Game.mode = 'short';
     if (params.has('freeze')) Game.clock.freeze();
     if (params.has('nodeadline') && params.get('nodeadline') !== '0') Game.clock.disableDeadline();
     if (params.has('stage')) Game.debug.goto(parseFloat(params.get('stage')));
@@ -1832,3 +1837,4 @@ window.Game = Game;
 
   document.addEventListener('DOMContentLoaded', init);
 })();
+an
