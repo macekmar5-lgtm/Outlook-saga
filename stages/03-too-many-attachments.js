@@ -72,7 +72,7 @@
         trashed.push({ name: att.name, size: att.size, icon: att.icon });
         G.attachments.remove(att.name);
         G.setAsset(binImg, 'trash-full.png');
-        G.sound('bounce.wav', 0.4);
+        G.sound('trash-crumple.wav');
         if (att.name === EXE) G.clippy.say(G.line('exeGone'), 'happy');
         renderBin();
       });

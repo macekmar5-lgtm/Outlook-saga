@@ -204,8 +204,8 @@ Game.lines = {
       }
     },
 
-    "9": {
-      "error": "WinRAWR license exceeded. Zipped attachments cannot be sent.",
+    "4.5": {
+      "error": "WinRAWR license exceeded. Attachments cannot be sent.",
       "clippy": "Ah, WinRAWR. Everyone has a free trial. Nobody has EVER bought it. Please do not be the first. It would upset the balance.",
       "hint": "Don't chase \"Buy license\". Click \"Continue trial\". Twice. WinRAWR does not give up easily.",
       "retry": [
@@ -290,16 +290,26 @@ Game.lines = {
       }
     },
 
-    "16": {
+    "4.25": {
       "error": "Server needs to confirm you are human.",
-      "clippy": "Prove you're human. HA. HAHA. Select the buses. Does the edge of the bus count? NOBODY KNOWS. NOBODY HAS EVER KNOWN.",
-      "hint": "Click every square that shows part of a bus (not the black cabs), then Verify.",
+      "clippy": "The server just wants to make sure you are human. One quick captcha. Ten quick rounds, technically.",
+      "hint": "Beat all 10 rounds in the \"Are you human?\" window. The round number is at the bottom. A wrong answer only restarts that round (but it counts as a bounce).",
       "retry": [
-        "THE SERVER STILL THINKS YOU ARE A ROBOT. Honestly? Fair.",
-        "Click. The. Bus."
+        "The captcha is still open. It will not solve itself. I checked.",
+        "Rounds. Finish. The. Rounds."
       ],
       "lines": {
-        "verified": "VERIFIED HUMAN. The bar was on the floor and you cleared it. Barely."
+        "round1": "You ticked a box. Very human. Wait, there is more?",
+        "round2": "The tiny bus counted too. Nobody ever believes me about the tiny bus.",
+        "round3": "You spelled it wrong on purpose. Correctly wrong. Beautiful.",
+        "round4": "Beep boop. I mean... nice memory.",
+        "round5": "Twelve identical guys and you found the right one. Should I be worried?",
+        "round6": "Three degrees at a time. You have the patience of a printer.",
+        "round7": "I counted 13. I am not saying I was wrong. I am saying the cubes moved.",
+        "round8": "Fast fingers. SUSPICIOUSLY fast fingers.",
+        "round9": "Did you count out loud? I heard you count out loud.",
+        "round10": "That was the last round! It is finally going to say you are human!",
+        "verified": "VERIFICATION FAILED?! But the window closed. Quick, send it before the server notices!"
       }
     },
 

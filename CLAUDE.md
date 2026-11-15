@@ -218,7 +218,7 @@ unhinged in 13–17 (`panic`). Every stage needs a `hint`.
 | Drag | `dragGhost(el, {onDrop(point, el), onStart, canDrag, persist})` — drags a copy on the top layer (visible above windows); `makeDraggable(el, {onDrop, revert, …})` moves the element itself (stays in its layer); `hitTest(el, point, pad)` (pad = extra px of hitbox around the target); `overlaps(a, b, minPx)` |
 | Coords | `toGame(event)` or `toGame(clientX, clientY)` → game px; `rectOf(el)` → `{x, y, w, h}` in game px |
 | Juice | `highlight(selOrEl, ms)` (pulsing highlight-frame.png; 0 = until stage end) → off(); `shake(strength)` (1 = normal, 0.5 light, 2 strong); `blackout(text, ms)` → Promise (black screen + text) |
-| Flow | `restartStage()` (cleanup + setup again, no popup), `send()`, `restart()` |
+| Flow | `restartStage()` (cleanup + setup again, no popup), `send()`, `restart()`, `countBounce()` (+1 bounce without sending: counter, stats, popup numbers; used by the captcha for wrong answers) |
 | Clippy | `clippy.say(text, mood)`, `clippy.hide()`, `clippy.mood` |
 | Text | `line('key', vars)` (current stage's `lines`), `line('general.x.y', vars)` (any path); stage fields `textVars`, `lines` (fallbacks if clippy-lines.js has no entry) |
 | Clock | `clock.add(min)`, `clock.minutes`, `clock.minutesLeft`, `clock.start/stop/freeze/disableDeadline()` |

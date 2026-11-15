@@ -60,7 +60,7 @@
   }
 
   Game.registerStage({
-    id: 9,
+    id: 4.5,
     name: 'WinRAWR',
     vibe: 'annoyed',
     assets: ['winrawr-logo.png'],

@@ -510,8 +510,8 @@ canvas { display: block; }
 #game.skin-cursor-loading { --cur-busy: var(--img-cursor-loading) var(--hotspot-cursor-loading), progress; }
 
 #game, #game * { cursor: var(--cur-default); }
-#game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .captcha-cell, .tray-item.clickable, .sig-pad canvas),
-#game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .captcha-cell, .tray-item.clickable) * { cursor: var(--cur-hand); }
+#game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .tray-item.clickable, .sig-pad canvas),
+#game :where(button, .clickable, .desktop-icon, #clippy-img, .draggable, .word, .tray-item.clickable) * { cursor: var(--cur-hand); }
 #game :where(input:not([readonly]), textarea) { cursor: var(--cur-text); }
 #game :where(button:disabled, button:disabled *, .ui-checkbox.read-only, .ui-checkbox.read-only *) { cursor: var(--cur-default); }
 #game.busy, #game.busy * { cursor: var(--cur-busy) !important; }
@@ -591,20 +591,76 @@ canvas { display: block; }
 .rule-list .ui-checkbox { color: var(--rule-fail-text); }
 .rule-list .ui-checkbox.is-checked { color: var(--rule-pass-text); }
 
-.captcha-header { width: 412px; padding: 12px 18px; text-align: left; }
-.captcha-header-small { font-size: 13px; }
-.captcha-header-big { font-size: 26px; font-weight: bold; line-height: 1.2; }
-#game.skin-captcha-header .captcha-header { color: #fff; }
-.captcha-grid { display: grid; grid-template-columns: repeat(4, 100px); gap: 4px; padding: 0; width: 412px; }
-.captcha-cell { position: relative; width: 100px; height: 100px; }
-.captcha-crop { position: absolute; inset: 0; overflow: hidden; transition: transform 0.12s; }
-.captcha-pic { position: absolute; }
-.captcha-cell.selected .captcha-crop { transform: scale(0.82); }
-.captcha-tick { position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; }
-#game:not(.skin-captcha-bus) .captcha-cell { outline: 2px dashed var(--placeholder-line); outline-offset: -2px; }
-#game:not(.skin-captcha-bus) .captcha-cell::after {
-  content: attr(data-n);
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font: bold 22px "Courier New", monospace; color: var(--placeholder-label); pointer-events: none;
-}
-#game:not(.skin-captcha-bus) .captcha-pic { visibility: hidden; }
+.cap-win .xp-body { padding: 6px; overflow: hidden; display: flex; flex-direction: column; }
+.xp-window.cap-shake { animation: shake 0.35s; }
+.cap-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+.cap-header { flex: none; height: 96px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; text-align: left; }
+.cap-header-text { flex: 1; font-size: 19px; font-weight: bold; line-height: 1.25; }
+.cap-header-small { font-size: 13px; font-weight: normal; }
+.cap-header-big { font-size: 28px; line-height: 1.15; }
+#game.skin-captcha-header .cap-header { color: #fff; }
+.cap-ref { flex: none; width: 78px; height: 78px; display: flex; align-items: center; justify-content: center; }
+.cap-ref-pic { width: 72px; height: 72px; }
+.cap-odd-number { font-family: Papyrus, "Brush Script MT", "Curlz MT", "Comic Sans MS", cursive; font-size: 40px; font-style: italic; vertical-align: middle; margin: 0 4px; }
+.cap-content { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; }
+.cap-locked { pointer-events: none; }
+.cap-footer { flex: none; height: 46px; display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+.cap-footer-left { display: flex; align-items: center; gap: 8px; min-width: 40px; }
+.cap-round { flex: 1; text-align: center; font-size: 11px; }
+.cap-submit { min-width: 96px; height: 32px; font-size: 14px; }
+.cap-msg { flex: none; min-height: 20px; padding-top: 4px; text-align: center; font-weight: bold; }
+.cap-icon-btn { width: 36px; height: 36px; flex: none; }
+.cap-icon { width: 100%; height: 100%; }
+.cap-final { font-size: 22px; font-weight: bold; max-width: 360px; line-height: 1.3; }
+
+.cap-robot { min-height: 80px; display: flex; align-items: center; justify-content: center; }
+.cap-robot-row { display: flex; align-items: center; gap: 12px; font-size: 18px; }
+.cap-robot-box, .cap-spinner { width: 30px; height: 30px; flex: none; }
+.cap-spinner { animation: cap-spin 0.8s linear infinite; }
+@keyframes cap-spin { to { transform: rotate(360deg); } }
+.cap-recaptcha { width: 304px; min-height: 78px; }
+
+.cap-grid { display: grid; gap: 4px; }
+.cap-tile { position: relative; width: 92px; height: 92px; }
+.cap-tile-pic { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform 0.12s; }
+.cap-tile-pic.small { inset: auto; }
+.cap-tile-pic.small.tl { top: 4px; left: 4px; }
+.cap-tile-pic.small.tr { top: 4px; right: 4px; }
+.cap-tile-pic.small.bl { bottom: 4px; left: 4px; }
+.cap-tile-pic.small.br { bottom: 4px; right: 4px; }
+.cap-tile.selected .cap-tile-pic { transform: scale(0.82); }
+.cap-tick { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; }
+
+.cap-words { width: 380px; height: 210px; }
+.cap-words-input { width: 300px; height: 34px; }
+.cap-words-input > input { font-size: 16px; }
+
+.cap-ring { position: relative; width: 310px; height: 310px; }
+.cap-ring-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cap-lit { opacity: 0; transition: opacity 0.08s; }
+.cap-lit.on { opacity: 1; }
+
+.cap-find-grid { display: grid; grid-template-columns: repeat(4, 92px); gap: 6px; }
+.cap-find-cell { position: relative; width: 92px; height: 96px; display: flex; align-items: center; justify-content: center; }
+.cap-find-pic { width: 80px; height: 80px; }
+.cap-find-cell.selected .cap-find-pic { opacity: 0.6; }
+
+.cap-rotate-row { display: flex; align-items: center; gap: 26px; }
+.cap-rotate-btn { width: 52px; height: 52px; }
+.cap-rotate-holder { position: relative; width: 210px; height: 210px; display: flex; align-items: center; justify-content: center; }
+.cap-rotate-circle { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cap-rotate-object { width: 130px; height: 130px; transition: transform 0.08s; }
+
+.cap-cubes { width: 390px; height: 270px; }
+.cap-numbers { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 400px; }
+.cap-number { min-width: 58px; height: 32px; font-size: 15px; }
+
+.cap-dot { width: 190px; height: 190px; }
+.cap-start { min-width: 220px; height: 38px; font-size: 16px; }
+.cap-reaction { min-height: 20px; font-weight: bold; }
+
+.cap-big-button { width: 230px; height: 230px; min-width: 0; padding: 0; }
+
+.cap-slider-hit { width: 380px; padding: 30px 0; }
+.cap-slider-track { position: relative; width: 100%; height: 22px; }
+.cap-slider-knob { position: absolute; top: 50%; width: 34px; height: 44px; margin: -22px 0 0 -17px; z-index: 4; }

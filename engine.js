@@ -1147,6 +1147,12 @@ window.Game = Game;
     if (meter) meter.textContent = `You bounced back ${Game.bounces} time${Game.bounces === 1 ? '' : 's'}`;
   }
 
+  Game.countBounce = function () {
+    Game.bounces++;
+    Game.stats.bounces = Game.bounces;
+    renderBounces();
+  };
+
   let sendBar = null;
   function showSending(ms) {
     const box = $('#send-progress');
