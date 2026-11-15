@@ -1212,9 +1212,9 @@ window.Game = Game;
     },
   };
 
-  // 'normal' or 'short' (title screen "Shortened Captcha" button, or ?mode=short). Only the captcha
-  // stage reads it. Each mode keeps its own best time.
-  Game.mode = 'normal';
+  // 'short' (title screen Start = shortened captcha, the default) or 'hard' (Hard Mode button, or ?mode=hard).
+  // Only the captcha stage reads it. Each mode keeps its own best time.
+  Game.mode = 'short';
   const bestKey = () => 'outlook-saga-best-ms' + (Game.mode === 'short' ? '-short' : '');
   let runStart = 0;
   let runEnd = 0;
@@ -1820,10 +1820,10 @@ window.Game = Game;
     clippyImg.addEventListener('click', onClippyClick);
     bubble.addEventListener('click', () => Game.clippy.hide());
 
-    $('#start-game').addEventListener('click', () => { Game.mode = 'normal'; startGame(); });
-    $('#start-short').addEventListener('click', () => { Game.mode = 'short'; startGame(); });
+    $('#start-game').addEventListener('click', () => { Game.mode = 'short'; startGame(); });
+    $('#start-hard').addEventListener('click', () => { Game.mode = 'hard'; startGame(); });
     const params = new URLSearchParams(location.search);
-    if (params.get('mode') === 'short') Game.mode = 'short';
+    if (params.get('mode') === 'hard') Game.mode = 'hard';
     if (params.has('freeze')) Game.clock.freeze();
     if (params.has('nodeadline') && params.get('nodeadline') !== '0') Game.clock.disableDeadline();
     if (params.has('stage')) Game.debug.goto(parseFloat(params.get('stage')));

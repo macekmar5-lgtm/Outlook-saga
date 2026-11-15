@@ -204,8 +204,8 @@ Game.lines = {
       }
     },
 
-    "4.5": {
-      "error": "WinRAWR license exceeded. Attachments cannot be sent.",
+    "9": {
+      "error": "WinRAWR license exceeded. New Folder.zip cannot be sent.",
       "clippy": "Ah, WinRAWR. Everyone has a free trial. Nobody has EVER bought it. Please do not be the first. It would upset the balance.",
       "hint": "Don't chase \"Buy license\". Click \"Continue trial\". Twice. WinRAWR does not give up easily.",
       "retry": [

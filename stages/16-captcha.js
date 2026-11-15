@@ -1,7 +1,7 @@
 (function () {
   const CAPTCHA_CONFIG = {
     rounds: 10,
-    // "Shortened Captcha" mode (title screen, Game.mode === 'short'): only these rounds, in this order.
+    // Default mode (title screen Start, Game.mode === 'short'): only these rounds, in this order. Hard Mode = all 10.
     shortRounds: [2, 4, 6], // 2 = picture grid, 4 = pattern (Simon), 6 = rotate
     useRealRecaptcha: true,
     // Google's public TEST key (always passes, shows a "testing only" note). Replace it with our own
